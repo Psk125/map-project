@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>แผนที่โครงการ</title>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg:#eef4f1;
+    --panel:#ffffff;
+    --card:#f2f8f5;
+    --card-hover:#e3f0e9;
+    --border:#dce8e2;
+    --accent:#3f9c79;
+    --accent-strong:#2e7a5c;
+    --accent-soft:rgba(63,156,121,.10);
+    --text:#1c2622;
+    --text-muted:#5f7269;
+    --text-faint:#94a89d;
+    --danger:#d1453a;
+    --danger-soft:rgba(209,69,58,.08);
+    --ok:#2e7a5c;
+    --head1:#2e7a5c;
+    --head2:#1f6f8b;
+    --head3:#3f9c79;
+    --head4:#7a8f2e;
+    --head5:#8a5fc9;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;height:100%;
+    font-family:"Prompt","Segoe UI",sans-serif;
+    background:var(--bg);
+    color:var(--text);
+  }
+  #app{ display:flex; height:100vh; width:100vw; }
+
+  /* ---------- sidebar ---------- */
+  #sidebar{
+    position:relative;
+    width:352px;
+    min-width:352px;
+    background:var(--panel);
+    border-right:1px solid var(--border);
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    transition:width .22s ease, min-width .22s ease;
+  }
+  #sidebar.collapsed{ width:60px; min-width:60px; }
+  #sidebar.collapsed #sidebar-scroll{ display:none; }
+  #sidebar-scroll{ overflow-y:auto; flex:1; padding:22px 18px 32px; }
+  #sidebar.resizing{ transition:none; }
+
+  /* ---------- resize handle ---------- */
+  #sidebar-resize-handle{
+    position:absolute; top:0; right:-4px; width:8px; height:100%;
+    cursor:col-resize; z-index:29; background:transparent;
+  }
+  #sidebar-resize-handle::after{
+    content:""; position:absolute; top:0; right:3px; width:2px; height:100%;
+    background:transparent; transition:background .15s;
+  }
+  #sidebar-resize-handle:hover::after,
+  #sidebar.resizing #sidebar-resize-handle::after{ background:var(--accent); }
+  #sidebar.collapsed #sidebar-resize-handle{ display:none; }
+  body.sidebar-resizing{ cursor:col-resize; user-select:none; }
+
+  #sidebar-toggle{
+    position:absolute; top:50%; right:-14px; transform:translateY(-50%); width:28px; height:28px;
+    border-radius:50%; background:var(--panel); border:1px solid var(--border);
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+    z-index:30; color:var(--text-muted); box-shadow:0 2px 10px rgba(30,50,40,.15);
+    transition:color .15s, border-color .15s;
+  }
+  #sidebar-toggle:hover{ color:var(--accent); border-color:var(--accent); }
+  #sidebar-toggle svg{ width:13px; height:13px; transition:transform .22s ease; }
+  #sidebar.collapsed #sidebar-toggle svg{ transform:rotate(180deg); }
+
+  #sidebar-collapsed-icon{
+    display:none; width:26px;height:26px;border-radius:8px;
+    background:linear-gradient(135deg,var(--accent),var(--accent-strong));
+    align-items:center; justify-content:center; margin:18px auto 0; flex-shrink:0;
+  }
+  #sidebar-collapsed-icon svg{ width:15px;height:15px;color:#fff; }
+  #sidebar.collapsed #sidebar-collapsed-icon{ display:flex; }
+  ::-webkit-scrollbar{ width:8px; }
+  ::-webkit-scrollbar-thumb{ background:var(--border); border-radius:4px; }
+
+  .brand{ display:flex; align-items:center; gap:9px; margin-bottom:18px; }
+  .brand-mark{
+    width:26px;height:26px;border-radius:8px;
+    background:linear-gradient(135deg,var(--accent),var(--accent-strong));
+    display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;
+  }
+  .brand-mark svg{ width:15px;height:15px;color:#fff; }
+  .brand h1{ font-size:16.5px; font-weight:600; margin:0; letter-spacing:-.01em; }
+
+  /* upload stage */
+  .upload-zone{
+    border:1.5px dashed var(--border);
+    border-radius:14px;
+    padding:26px 18px;
+    text-align:center;
+    cursor:pointer;
+    transition:border-color .15s, background .15s;
+    background:var(--card);
+  }
+  .upload-zone:hover, .upload-zone.drag{ border-color:var(--accent); background:var(--card-hover); }
+  .upload-zone svg{ width:28px;height:28px;color:var(--accent); margin-bottom:8px; }
+  .upload-title{ font-size:14px; font-weight:600; }
+  .upload-hint{ font-size:11.5px; color:var(--text-muted); margin-top:4px; }
+  #file-input{ display:none; }
+
+  .status-line{
+    font-size:12px; margin-top:10px; padding:9px 11px;
+    border-radius:9px; display:none; line-height:1.55;
+  }
+  .status-line.ok{ display:block; background:var(--accent-soft); color:var(--accent-strong); }
+  .status-line.err{ display:block; background:var(--danger-soft); color:var(--danger); }
+
+  .file-format-note{
+    font-size:11.5px; color:var(--text-muted); line-height:1.7; margin-top:16px;
+  }
+  .file-format-note code{
+    background:var(--card); padding:1px 6px; border-radius:5px; font-size:11px; color:var(--text);
+  }
+
+  /* dashboard stage */
+  #dashboard-stage{ display:none; }
+
+  .file-row{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:4px; gap:10px;
+  }
+  #file-name-label{
+    font-size:12px; color:var(--text-muted);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  #change-file-btn{
+    font-family:inherit; font-size:11.5px; font-weight:500;
+    color:var(--accent); background:none; border:none; cursor:pointer;
+    padding:4px 0; flex-shrink:0;
+  }
+  #change-file-btn:hover{ text-decoration:underline; }
+
+  #skip-note{ font-size:11px; color:var(--text-faint); margin-bottom:14px; }
+
+  .stat-grid{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; margin-bottom:18px; }
+  .stat-card{
+    background:var(--card); border:1px solid var(--border); border-radius:14px;
+    padding:14px 16px; min-width:0;
+  }
+  .stat-label{ font-size:12px; color:var(--text-muted); margin-bottom:6px; }
+  .stat-value{
+    font-size:28px; font-weight:700; color:var(--accent);
+    letter-spacing:-.02em; font-variant-numeric:tabular-nums;
+  }
+
+  .search-wrap{ position:relative; margin-bottom:22px; }
+  .search-wrap svg{
+    position:absolute; left:13px; top:50%; transform:translateY(-50%);
+    width:16px;height:16px; color:var(--text-faint); pointer-events:none;
+  }
+  #search-input{
+    width:100%; font-family:inherit; font-size:13.5px;
+    background:var(--card); border:1px solid var(--border); border-radius:11px;
+    padding:11px 14px 11px 38px; color:var(--text); outline:none;
+    transition:border-color .15s;
+  }
+  #search-input::placeholder{ color:var(--text-faint); }
+  #search-input:focus{ border-color:var(--accent); }
+  #search-input:disabled{ opacity:.55; cursor:not-allowed; }
+
+  .filters-head{
+    display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;
+  }
+  .section-label{
+    font-size:11px; text-transform:uppercase; letter-spacing:.06em;
+    color:var(--text-muted); font-weight:600;
+  }
+  #clear-filters-btn{
+    font-family:inherit; font-size:11.5px; color:var(--text-muted);
+    background:none; border:none; cursor:pointer; padding:2px 0;
+  }
+  #clear-filters-btn:hover{ color:var(--accent); }
+
+  /* colored section headers */
+  .section-header{ display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+  .section-header .bar{ width:4px; height:14px; border-radius:3px; flex-shrink:0; }
+  .section-header .section-label{ margin:0; }
+  .section-header.h1 .bar{ background:var(--head1); }
+  .section-header.h2 .bar{ background:var(--head2); }
+  .section-header.h3 .bar{ background:var(--head3); }
+  .section-header.h4 .bar{ background:var(--head4); }
+  .section-header.h5 .bar{ background:var(--head5); }
+  .filters-head.section-header{ justify-content:space-between; }
+  .filters-head.section-header .left{ display:flex; align-items:center; gap:8px; }
+  .legend-header{ justify-content:space-between; margin-bottom:14px; }
+  .legend-col-select{
+    font-family:inherit; font-size:11.5px; font-weight:500;
+    color:var(--accent-strong); background:var(--accent-soft);
+    border:1px solid var(--border); border-radius:8px;
+    padding:5px 24px 5px 10px; cursor:pointer; outline:none;
+    appearance:none; -webkit-appearance:none; max-width:150px;
+    text-overflow:ellipsis;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%232e7a5c' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat:no-repeat; background-position:right 8px center;
+  }
+  .legend-col-select:hover{ border-color:var(--accent); }
+  .legend-empty{ font-size:12px; color:var(--text-faint); line-height:1.6; padding:4px 0 2px; }
+
+  .filters-grid{
+    display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:14px 12px;
+    margin-bottom:8px;
+  }
+  .filter-field{ min-width:0; }
+  .filter-field label{
+    display:block; font-size:12px; color:var(--text-muted); margin-bottom:6px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  /* searchable dropdown ("dd") replacing native <select> */
+  .dd{ position:relative; min-width:0; }
+  .dd-input{
+    width:100%; font-family:inherit; font-size:13px; font-weight:500;
+    color:var(--text); background:var(--card);
+    border:1px solid var(--border); border-radius:10px;
+    padding:9px 30px 9px 12px; cursor:pointer; outline:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%235f7269' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat:no-repeat; background-position:right 12px center;
+    transition:border-color .15s, background-color .15s;
+  }
+  .dd-input::placeholder{ color:var(--text); opacity:1; font-weight:500; }
+  .dd-input:hover{ background-color:var(--card-hover); }
+  .dd-input:focus{ border-color:var(--accent); background-color:var(--panel); }
+  .dd.active-filter .dd-input{ border-color:var(--accent); color:var(--accent-strong); background-color:var(--accent-soft); }
+  .dd.open .dd-input{ border-color:var(--accent); border-bottom-left-radius:0; border-bottom-right-radius:0; }
+  .dd-list{
+    display:none; position:absolute; left:0; right:0; top:100%; z-index:25;
+    max-height:220px; overflow-y:auto; background:var(--panel);
+    border:1px solid var(--accent); border-top:none;
+    border-radius:0 0 10px 10px; box-shadow:0 10px 24px rgba(30,50,40,.15);
+  }
+  .dd.open .dd-list{ display:block; }
+  .dd-item{
+    padding:8px 12px; font-size:12.5px; cursor:pointer; color:var(--text);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .dd-item:hover, .dd-item.hl{ background:var(--card-hover); }
+  .dd-item.selected{ color:var(--accent-strong); font-weight:600; background:var(--accent-soft); }
+  .dd-item.dd-all{ color:var(--text-muted); border-bottom:1px solid var(--border); }
+  .dd-empty{ padding:10px 12px; font-size:12px; color:var(--text-faint); }
+
+  .legend-item{ display:flex; align-items:center; gap:9px; font-size:12.5px; padding:6px 0; }
+  .legend-dot{ width:11px;height:11px;border-radius:50%; flex-shrink:0; box-shadow:0 0 0 2px rgba(0,0,0,.05); }
+  .legend-count{ margin-left:auto; color:var(--text-muted); font-variant-numeric:tabular-nums; font-size:11.5px; }
+
+  /* ---------- zone (area-division) legend ---------- */
+  #zone-status{ font-size:11.5px; color:var(--text-muted); line-height:1.6; margin-bottom:10px; }
+  #zone-status.warn{ color:var(--danger); }
+  .legend-item.clickable{ cursor:pointer; border-radius:8px; padding:6px 8px; margin:0 -8px; transition:background .12s; }
+  .legend-item.clickable:hover{ background:var(--card-hover); }
+  .legend-item.clickable.zone-selected{ background:var(--accent-soft); }
+  .legend-dot.square{ border-radius:4px; }
+  #clear-zone-btn{
+    display:none; margin-top:10px; font-family:inherit; font-size:11.5px; font-weight:500;
+    color:var(--text-muted); background:var(--card); border:1px solid var(--border);
+    border-radius:9px; padding:8px 10px; cursor:pointer; width:100%; text-align:center;
+    transition:background .15s, color .15s;
+  }
+  #clear-zone-btn:hover{ background:var(--card-hover); color:var(--accent-strong); }
+
+  /* ---------- map ---------- */
+  #map-wrap{ flex:1; position:relative; }
+  #map{ width:100%; height:100%; background:#e9ebf5; }
+
+  #placeholder{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    flex-direction:column; gap:10px; color:var(--text-muted); background:var(--bg); z-index:5;
+  }
+  #placeholder svg{ width:42px;height:42px;color:var(--border); }
+  #placeholder h2{ font-size:15px; color:var(--text); margin:0; font-weight:600; }
+  #placeholder p{ font-size:12.5px; margin:0; max-width:260px; text-align:center; line-height:1.6; }
+
+  .map-btn{
+    position:absolute; z-index:10;
+    background:var(--panel); border:1px solid var(--border); border-radius:10px;
+    color:var(--text); font-family:inherit; font-size:12px; font-weight:500;
+    padding:9px 13px; cursor:pointer; display:flex; align-items:center; gap:7px;
+    box-shadow:0 4px 14px rgba(30,34,51,.12);
+    transition:background .15s, border-color .15s;
+  }
+  .map-btn:hover{ background:var(--card-hover); border-color:var(--accent); }
+  .map-btn svg{ width:14px;height:14px; }
+  #reset-view-btn{ top:16px; right:16px; }
+
+  /* leaflet overrides for light theme */
+  .leaflet-control-attribution{ background:rgba(255,255,255,.8) !important; color:var(--text-faint) !important; font-size:10px !important; }
+  .leaflet-control-attribution a{ color:var(--text-muted) !important; }
+  .leaflet-control-zoom a{
+    background:var(--panel) !important; color:var(--text) !important; border-color:var(--border) !important;
+  }
+  .leaflet-control-zoom a:hover{ background:var(--card-hover) !important; }
+  .leaflet-top.leaflet-left{ top:16px !important; left:16px !important; }
+
+  .leaflet-popup-content-wrapper{
+    background:var(--panel); color:var(--text); border-radius:12px;
+    box-shadow:0 10px 30px rgba(30,34,51,.18); border:1px solid var(--border);
+  }
+  .leaflet-popup-tip{ background:var(--panel); border:1px solid var(--border); }
+  .leaflet-popup-close-button{ color:var(--text-muted) !important; }
+  .leaflet-popup-content{ font-family:"Prompt",sans-serif; font-size:13px; line-height:1.55; min-width:180px; margin:12px 14px; }
+  .popup-title{ font-weight:600; margin-bottom:3px; color:var(--text); font-size:13.5px; }
+  .popup-cat{
+    display:inline-block; font-size:11px; padding:2px 9px; border-radius:20px;
+    margin-top:4px; color:#fff; font-weight:600;
+  }
+  .popup-field{ font-size:11.5px; color:var(--text-muted); margin-top:4px; }
+  .popup-field strong{ color:var(--text); font-weight:500; }
+
+  @media (max-width:800px){
+    #app{ flex-direction:column; }
+    #sidebar{ width:100% !important; min-width:0 !important; max-height:46vh; border-right:none; border-bottom:1px solid var(--border); }
+    #sidebar.collapsed{ max-height:0; }
+    #sidebar.collapsed #sidebar-scroll{ display:block; }
+    #sidebar-toggle{ display:none; }
+    #sidebar-resize-handle{ display:none; }
+    #map-wrap{ flex:1; min-height:44vh; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="sidebar">
+    <button id="sidebar-toggle" title="ย่อ/ขยายแถบด้านข้าง">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+    </button>
+    <div id="sidebar-collapsed-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z"></path><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
+    </div>
+    <div id="sidebar-resize-handle" title="ลากเพื่อปรับความกว้าง"></div>
+    <div id="sidebar-scroll">
+      <div class="brand">
+        <span class="brand-mark">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z"></path><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
+        </span>
+        <h1>แผนที่โครงการ</h1>
+      </div>
+
+      <!-- ============ UPLOAD STAGE ============ -->
+      <div id="upload-stage">
+        <div class="upload-zone" id="drop-zone">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          <div class="upload-title">คลิกหรือลากไฟล์มาวาง</div>
+          <div class="upload-hint">รองรับ .xlsx, .xls, .csv</div>
+        </div>
+        <input type="file" id="file-input" accept=".xlsx,.xls,.csv" />
+        <div class="status-line" id="status"></div>
+        <div class="file-format-note">
+          ควรมีคอลัมน์ละติจูด/ลองจิจูด เช่น <code>lat</code>, <code>lng</code> หรือ <code>ละติจูด</code>, <code>ลองจิจูด</code> — ระบบจะตรวจจับคอลัมน์เองอัตโนมัติ และสร้างตัวกรองจากทุกคอลัมน์ในไฟล์ให้เอง
+        </div>
+      </div>
+
+      <!-- ============ DASHBOARD STAGE ============ -->
+      <div id="dashboard-stage">
+        <div class="file-row">
+          <span id="file-name-label"></span>
+          <button id="change-file-btn">เปลี่ยนไฟล์</button>
+        </div>
+        <div id="skip-note"></div>
+
+        <div class="section-header h1">
+          <span class="bar"></span><span class="section-label">ภาพรวม</span>
+        </div>
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-label">จำนวนทั้งหมด</div>
+            <div class="stat-value" id="stat-total-big">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">แสดงบนแผนที่</div>
+            <div class="stat-value" id="stat-shown-big">0</div>
+          </div>
+        </div>
+
+        <div class="section-header h2">
+          <span class="bar"></span><span class="section-label">ค้นหาโครงการ</span>
+        </div>
+        <div class="search-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input id="search-input" placeholder="ค้นหาชื่อโครงการ..." />
+        </div>
+
+        <div class="filters-head section-header h3">
+          <span class="left"><span class="bar"></span><span class="section-label">ตัวกรองข้อมูล</span></span>
+          <button id="clear-filters-btn">ล้างตัวกรอง</button>
+        </div>
+        <div id="filters-grid" class="filters-grid"></div>
+
+        <div class="section" id="legend-section" style="margin-top:20px; padding-top:16px; border-top:1px solid var(--border);">
+          <div class="section-header h4 legend-header">
+            <span class="left"><span class="bar"></span><span class="section-label">คำอธิบายสี</span></span>
+            <select id="legend-col-select" class="legend-col-select"></select>
+          </div>
+          <div id="legend-list"></div>
+        </div>
+
+        <div class="section" id="zone-section" style="margin-top:20px; padding-top:16px; border-top:1px solid var(--border);">
+          <div class="section-header h5 legend-header">
+            <span class="left"><span class="bar"></span><span class="section-label">แบ่งพื้นที่บนแผนที่</span></span>
+            <select id="zone-col-select" class="legend-col-select"></select>
+          </div>
+          <div id="zone-status"></div>
+          <div id="zone-legend-list"></div>
+          <button id="clear-zone-btn">✕ ล้างการเลือกพื้นที่</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="map-wrap">
+    <div id="placeholder">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z"></path><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
+      <h2 id="placeholder-title">ยังไม่มีข้อมูลบนแผนที่</h2>
+      <p id="placeholder-text">อัปโหลดไฟล์ Excel ทางด้านซ้ายเพื่อเริ่มปักหมุด</p>
+    </div>
+    <button class="map-btn" id="reset-view-btn" style="display:none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9"></path><path d="M3 3v6h6"></path></svg>
+      รีเซ็ตมุมมอง
+    </button>
+    <div id="map"></div>
+  </div>
+</div>
+
+<script>
+const COLOR_PALETTE = ["#3f9c79","#e0703f","#1f6f8b","#c99a1f","#d1478f","#4f74d1","#a3a11f","#d1475f","#1fb3a3","#7a8f2e"];
+const MAX_FILTER_UNIQUE = 4000;
+
+let map = L.map('map', { zoomControl: true, attributionControl: true }).setView([13.7563, 100.5018], 6);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  maxZoom: 19,
+  subdomains: 'abcd',
+  attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+}).addTo(map);
+
+function refreshMapSize(){ map.invalidateSize(); }
+window.addEventListener('load', refreshMapSize);
+window.addEventListener('resize', refreshMapSize);
+setTimeout(refreshMapSize, 250);
+if (window.ResizeObserver){ new ResizeObserver(refreshMapSize).observe(document.getElementById('map-wrap')); }
+
+// Area-division polygon layer (Thai province boundaries) — added to the map
+// *before* the markers layer below, so markers always render on top of it.
+let provinceLayer = L.layerGroup().addTo(map);
+
+// No clustering: every point is drawn individually and stays spread out
+// at every zoom level, rather than merging into a single combined dot.
+let markersLayer = L.layerGroup().addTo(map);
+
+let currentRows = [];
+let currentHeaders = [];
+let categoryColorMap = {};
+let activeFilters = {};
+let searchTerm = '';
+let lastBounds = [];
+
+// resolved automatically from the file, no manual column picker exposed to the user
+let latCol = null, lngCol = null, nameCol = null, catCol = null;
+
+// ---------- area division (province boundaries colored by a chosen column) ----------
+let provinceGeoJSON = null;      // raw GeoJSON, loaded once from a public source
+let provinceFeaturesList = [];   // [{feature, bbox, name, voteCounts, assignedValue, color}]
+let zoneCol = null;              // currently chosen column used to color/group provinces
+let zoneColorMap = {};           // column-value -> color
+let rowProvinceIndex = [];       // parallel to currentRows: which provinceFeaturesList index each row physically falls in (-1 = none)
+let selectedProvinceKeys = new Set(); // provinceFeaturesList indices currently selected/filtered to
+
+const el = id => document.getElementById(id);
+const statusEl = el('status');
+const dropZone = el('drop-zone');
+const fileInput = el('file-input');
+const placeholder = el('placeholder');
+const resetViewBtn = el('reset-view-btn');
+
+const sidebarEl = el('sidebar');
+const sidebarToggle = el('sidebar-toggle');
+sidebarToggle.addEventListener('click', () => {
+  const isCollapsing = !sidebarEl.classList.contains('collapsed');
+  if (isCollapsing){
+    // remember any custom (dragged) width, then clear inline styles so
+    // the .collapsed CSS rule (60px) can actually take effect
+    if (sidebarEl.style.width) sidebarEl.dataset.customWidth = sidebarEl.style.width;
+    sidebarEl.style.width = '';
+    sidebarEl.style.minWidth = '';
+  } else if (sidebarEl.dataset.customWidth){
+    // restore the custom width the user had dragged to
+    sidebarEl.style.width = sidebarEl.dataset.customWidth;
+    sidebarEl.style.minWidth = sidebarEl.dataset.customWidth;
+  }
+  sidebarEl.classList.toggle('collapsed');
+});
+sidebarEl.addEventListener('transitionend', (e) => {
+  if (e.propertyName === 'width') refreshMapSize();
+});
+
+// ---- drag-to-resize sidebar width ----
+const SIDEBAR_MIN_WIDTH = 260;
+const SIDEBAR_MAX_WIDTH = 640;
+const resizeHandle = el('sidebar-resize-handle');
+let resizeStartX = 0, resizeStartWidth = 0;
+
+function onResizeMove(e){
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  let newWidth = resizeStartWidth + (clientX - resizeStartX);
+  newWidth = Math.max(SIDEBAR_MIN_WIDTH, Math.min(SIDEBAR_MAX_WIDTH, newWidth));
+  sidebarEl.style.width = newWidth + 'px';
+  sidebarEl.style.minWidth = newWidth + 'px';
+}
+function stopResize(){
+  sidebarEl.classList.remove('resizing');
+  document.body.classList.remove('sidebar-resizing');
+  document.removeEventListener('mousemove', onResizeMove);
+  document.removeEventListener('mouseup', stopResize);
+  document.removeEventListener('touchmove', onResizeMove);
+  document.removeEventListener('touchend', stopResize);
+  refreshMapSize();
+}
+function startResize(e){
+  if (sidebarEl.classList.contains('collapsed')) return;
+  resizeStartX = e.touches ? e.touches[0].clientX : e.clientX;
+  resizeStartWidth = sidebarEl.getBoundingClientRect().width;
+  sidebarEl.classList.add('resizing');
+  document.body.classList.add('sidebar-resizing');
+  document.addEventListener('mousemove', onResizeMove);
+  document.addEventListener('mouseup', stopResize);
+  document.addEventListener('touchmove', onResizeMove, { passive:false });
+  document.addEventListener('touchend', stopResize);
+  e.preventDefault();
+}
+resizeHandle.addEventListener('mousedown', startResize);
+resizeHandle.addEventListener('touchstart', startResize, { passive:false });
+resizeHandle.addEventListener('dblclick', () => {
+  sidebarEl.style.width = '';
+  sidebarEl.style.minWidth = '';
+  delete sidebarEl.dataset.customWidth;
+  refreshMapSize();
+});
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag');
+  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e => { if (e.target.files.length) handleFile(e.target.files[0]); });
+el('change-file-btn').addEventListener('click', () => fileInput.click());
+resetViewBtn.addEventListener('click', () => { if (lastBounds.length) map.fitBounds(lastBounds, { padding: [40,40], maxZoom: 15 }); });
+el('search-input').addEventListener('input', e => { searchTerm = e.target.value.trim().toLowerCase(); rebuildMarkers(); });
+el('clear-filters-btn').addEventListener('click', () => {
+  activeFilters = {};
+  document.querySelectorAll('#filters-grid .dd').forEach(dd => {
+    dd.classList.remove('active-filter');
+    const input = dd.querySelector('.dd-input');
+    if (input) input.value = '';
+  });
+  el('search-input').value = '';
+  searchTerm = '';
+  rebuildMarkers();
+});
+
+function setStatus(msg, type){
+  statusEl.textContent = msg;
+  statusEl.className = 'status-line ' + (type || 'ok');
+}
+
+function guessColumn(headers, patterns){
+  const lower = headers.map(h => String(h).toLowerCase().trim());
+  for (const p of patterns){ const idx = lower.findIndex(h => h === p); if (idx !== -1) return headers[idx]; }
+  for (const p of patterns){ const idx = lower.findIndex(h => h.includes(p)); if (idx !== -1) return headers[idx]; }
+  return null;
+}
+
+function parseCoord(val){
+  if (val === "" || val === null || val === undefined) return null;
+  if (typeof val === 'number') return isFinite(val) ? val : null;
+  let s = String(val).trim();
+  const thaiDigits = '๐๑๒๓๔๕๖๗๘๙';
+  s = s.replace(/[๐-๙]/g, d => thaiDigits.indexOf(d));
+  s = s.replace(/[°NSEWnsew]/g, '').trim();
+  s = s.replace(/,/g, '');
+  s = s.replace(/[^\d.\-]/g, '');
+  if (s === '' || s === '-' || s === '.') return null;
+  const n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+
+// Fallback for when column names don't match common lat/lng patterns:
+// scan sample values and infer which columns behave like coordinates.
+function detectNumericRangeColumns(headers, rows){
+  const sample = rows.slice(0, Math.min(30, rows.length));
+  const stats = {};
+  headers.forEach(h => {
+    let count = 0, latOk = 0, lngOk = 0;
+    sample.forEach(r => {
+      const v = parseCoord(r[h]);
+      if (v === null) return;
+      count++;
+      if (v >= -90 && v <= 90) latOk++;
+      if (v >= -180 && v <= 180) lngOk++;
+    });
+    stats[h] = { count, latOk, lngOk };
+  });
+  const latCandidates = headers.filter(h => stats[h].count > 0 && stats[h].latOk / stats[h].count >= 0.8);
+  const lngCandidates = headers.filter(h => stats[h].count > 0 && stats[h].lngOk / stats[h].count >= 0.8);
+  const lngPure = lngCandidates.filter(h => !latCandidates.includes(h));
+  const foundLat = latCandidates[0] || null;
+  const foundLng = lngPure[0] || lngCandidates.find(h => h !== foundLat) || null;
+  return { latCol: foundLat, lngCol: foundLng };
+}
+
+function resolveColumns(){
+  latCol = guessColumn(currentHeaders, ['lat','latitude','ละติจูด','แลต']);
+  lngCol = guessColumn(currentHeaders, ['lng','lon','long','longitude','ลองจิจูด','ลอง']);
+  if (!latCol || !lngCol){
+    const auto = detectNumericRangeColumns(currentHeaders, currentRows);
+    if (!latCol) latCol = auto.latCol;
+    if (!lngCol) lngCol = auto.lngCol;
+  }
+  nameCol = guessColumn(currentHeaders, ['ชื่อโครงการ','ชื่อโครงการ (project name)','project name','name','ชื่อ','โครงการ','สถานที่','title','label']);
+  catCol = guessColumn(currentHeaders, ['category','หมวดหมู่','สถานะ','status','type','ประเภท']);
+  zoneCol = guessColumn(currentHeaders, ['จังหวัด','ภาค','เขต','โซน','พื้นที่','zone','region','area','province']);
+}
+
+/* =========================================================
+   Area division: color Thai provinces on the map according
+   to whichever column the user picks, then let the user click
+   a colored area to filter/highlight the matching pins —
+   mirrors the equipment_map.html behavior but works on any
+   column instead of a fixed สคพ. lookup.
+   ========================================================= */
+const PROVINCE_GEO_URLS = [
+  "https://raw.githubusercontent.com/apisit/thailand.json/master/thailandWithName.json",
+  "https://cdn.jsdelivr.net/gh/apisit/thailand.json@master/thailandWithName.json",
+  "https://github.com/apisit/thailand.json/raw/refs/heads/master/thailandWithName.json"
+];
+
+function withTimeout(promise, ms){
+  return Promise.race([promise, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
+}
+
+async function loadProvinceGeo(){
+  for (const url of PROVINCE_GEO_URLS){
+    try {
+      const res = await withTimeout(fetch(url), 6000);
+      if (!res.ok) continue;
+      const gj = await res.json();
+      if (gj && gj.features && gj.features.length > 10) return gj;
+    } catch (e) { /* try next source */ }
+  }
+  return null;
+}
+
+function computeBBox(geometry){
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  const scanRing = ring => ring.forEach(([x, y]) => {
+    if (x < minX) minX = x; if (x > maxX) maxX = x;
+    if (y < minY) minY = y; if (y > maxY) maxY = y;
+  });
+  if (geometry.type === 'Polygon') geometry.coordinates.forEach(scanRing);
+  else if (geometry.type === 'MultiPolygon') geometry.coordinates.forEach(poly => poly.forEach(scanRing));
+  return [minX, minY, maxX, maxY];
+}
+
+function pointInRing(lng, lat, ring){
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++){
+    const xi = ring[i][0], yi = ring[i][1];
+    const xj = ring[j][0], yj = ring[j][1];
+    const intersect = ((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+function pointInPolygonCoords(lng, lat, coords){
+  if (!coords.length || !pointInRing(lng, lat, coords[0])) return false;
+  for (let k = 1; k < coords.length; k++){
+    if (pointInRing(lng, lat, coords[k])) return false; // inside a hole
+  }
+  return true;
+}
+function pointInFeature(lng, lat, feature){
+  const geom = feature.geometry;
+  if (!geom) return false;
+  if (geom.type === 'Polygon') return pointInPolygonCoords(lng, lat, geom.coordinates);
+  if (geom.type === 'MultiPolygon') return geom.coordinates.some(poly => pointInPolygonCoords(lng, lat, poly));
+  return false;
+}
+function findProvinceForPoint(lng, lat){
+  for (let i = 0; i < provinceFeaturesList.length; i++){
+    const p = provinceFeaturesList[i];
+    const [minX, minY, maxX, maxY] = p.bbox;
+    if (lng < minX || lng > maxX || lat < minY || lat > maxY) continue;
+    if (pointInFeature(lng, lat, p.feature)) return i;
+  }
+  return -1;
+}
+
+function buildProvinceFeaturesList(gj){
+  provinceFeaturesList = gj.features.map(f => {
+    const nameVal = Object.values(f.properties || {}).find(v => typeof v === 'string') || '';
+    return { feature: f, bbox: computeBBox(f.geometry), name: nameVal, voteCounts: {}, assignedValue: null, color: null };
+  });
+}
+
+// For every province, tally the zoneCol values of the data points that fall
+// geographically inside it, then assign the province the color of whichever
+// value "wins" that province. Also records, per row, exactly which single
+// province it physically falls inside (rowProvinceIndex) — this is what lets
+// clicking one province filter pins to *only* that province, even if a
+// neighboring province happens to share the same color/category.
+function computeZoneGrouping(){
+  zoneColorMap = {};
+  rowProvinceIndex = new Array(currentRows.length).fill(-1);
+  provinceFeaturesList.forEach(p => { p.voteCounts = {}; p.assignedValue = null; p.color = null; });
+  if (!latCol || !lngCol || !provinceFeaturesList.length) return;
+
+  currentRows.forEach((row, i) => {
+    const lat = parseCoord(row[latCol]), lng = parseCoord(row[lngCol]);
+    if (lat === null || lng === null) return;
+    const idx = findProvinceForPoint(lng, lat);
+    if (idx === -1) return;
+    rowProvinceIndex[i] = idx;
+    if (!zoneCol) return;
+    const val = String(row[zoneCol] ?? '').trim();
+    if (!val) return;
+    provinceFeaturesList[idx].voteCounts[val] = (provinceFeaturesList[idx].voteCounts[val] || 0) + 1;
+  });
+
+  if (!zoneCol) return;
+
+  provinceFeaturesList.forEach(p => {
+    const entries = Object.entries(p.voteCounts);
+    if (!entries.length) return;
+    entries.sort((a, b) => b[1] - a[1]);
+    p.assignedValue = entries[0][0];
+  });
+
+  const uniqueValues = Array.from(new Set(provinceFeaturesList.map(p => p.assignedValue).filter(Boolean)));
+  uniqueValues.sort((a, b) => collator.compare(a, b));
+  let colorIndex = 0;
+  uniqueValues.forEach(v => { zoneColorMap[v] = COLOR_PALETTE[colorIndex % COLOR_PALETTE.length]; colorIndex++; });
+  provinceFeaturesList.forEach(p => { p.color = p.assignedValue ? zoneColorMap[p.assignedValue] : null; });
+}
+
+function provinceStyle(p, index){
+  if (!p.assignedValue){
+    return { fillColor: '#d7dedb', color: '#c3cdc8', weight: 1, fillOpacity: 0.35 };
+  }
+  const hasSelection = selectedProvinceKeys.size > 0;
+  const isSelected = selectedProvinceKeys.has(index);
+  return {
+    fillColor: p.color,
+    color: isSelected ? '#1c2622' : '#ffffff',
+    weight: isSelected ? 2 : 1,
+    fillOpacity: hasSelection ? (isSelected ? 0.75 : 0.12) : 0.5
+  };
+}
+
+function renderProvinceLayer(){
+  provinceLayer.clearLayers();
+  if (!zoneCol || !provinceGeoJSON) return;
+
+  provinceFeaturesList.forEach((p, index) => {
+    const layer = L.geoJSON(p.feature, { style: () => provinceStyle(p, index) });
+    if (p.assignedValue){
+      layer.bindTooltip(`${escapeHtml(p.name)} — ${escapeHtml(p.assignedValue)}`, { sticky: true });
+      layer.on('click', () => {
+        // single-select: clicking a province shows only the pins physically
+        // inside that one province, regardless of what other provinces share its color
+        if (selectedProvinceKeys.size === 1 && selectedProvinceKeys.has(index)){
+          selectedProvinceKeys = new Set();
+        } else {
+          selectedProvinceKeys = new Set([index]);
+        }
+        renderProvinceLayer();
+        renderZoneLegend();
+        rebuildMarkers();
+      });
+      layer.on('mouseover', function(){ this.setStyle({ weight: 2 }); });
+      layer.on('mouseout', function(){ this.setStyle(provinceStyle(p, index)); });
+    } else {
+      layer.bindTooltip(escapeHtml(p.name), { sticky: true });
+    }
+    layer.addTo(provinceLayer);
+  });
+
+  el('clear-zone-btn').style.display = selectedProvinceKeys.size ? 'block' : 'none';
+}
+
+function renderZoneLegend(){
+  const list = el('zone-legend-list');
+  const status = el('zone-status');
+  list.innerHTML = '';
+
+  if (!zoneCol){
+    status.className = '';
+    status.textContent = 'เลือกคอลัมน์ด้านบนเพื่อแบ่งสีพื้นที่บนแผนที่ตามจังหวัด';
+    return;
+  }
+  if (!provinceGeoJSON){
+    status.className = 'warn';
+    status.textContent = 'กำลังโหลดขอบเขตจังหวัด… หากใช้เวลานานเกินไป อาจเป็นเพราะเครือข่ายไม่สามารถเข้าถึงแหล่งข้อมูลแผนที่ได้';
+    return;
+  }
+
+  const entries = Object.entries(zoneColorMap);
+  if (!entries.length){
+    status.className = '';
+    status.textContent = 'ไม่พบจุดที่จับคู่กับจังหวัดได้ ลองเลือกคอลัมน์อื่น';
+    return;
+  }
+  status.className = '';
+  status.textContent = selectedProvinceKeys.size === 0
+    ? 'คลิกจังหวัดบนแผนที่ หรือคลิกรายการด้านล่าง เพื่อแสดงหมุดในพื้นที่นั้น'
+    : '';
+
+  const counts = {};
+  currentRows.forEach(row => {
+    const lat = parseCoord(row[latCol]), lng = parseCoord(row[lngCol]);
+    if (lat === null || lng === null) return;
+    const val = String(row[zoneCol] ?? '').trim();
+    if (val) counts[val] = (counts[val] || 0) + 1;
+  });
+
+  entries.sort((a, b) => collator.compare(a[0], b[0]));
+  entries.forEach(([value, color]) => {
+    const matchingIndices = [];
+    provinceFeaturesList.forEach((p, idx) => { if (p.assignedValue === value) matchingIndices.push(idx); });
+    const isFullySelected = matchingIndices.length > 0 &&
+      selectedProvinceKeys.size === matchingIndices.length &&
+      matchingIndices.every(idx => selectedProvinceKeys.has(idx));
+
+    const item = document.createElement('div');
+    item.className = 'legend-item clickable' + (isFullySelected ? ' zone-selected' : '');
+    item.innerHTML = `<span class="legend-dot square" style="background:${color}"></span><span>${escapeHtml(value)}</span><span class="legend-count">${(counts[value] || 0).toLocaleString()}</span>`;
+    item.addEventListener('click', () => {
+      // selects every province carrying this value/color; if a single
+      // province within it was already the sole selection, this widens it —
+      // click a province directly on the map to narrow back down to just one
+      selectedProvinceKeys = isFullySelected ? new Set() : new Set(matchingIndices);
+      renderProvinceLayer();
+      renderZoneLegend();
+      rebuildMarkers();
+    });
+    list.appendChild(item);
+  });
+}
+
+function populateZoneColumnSelect(){
+  const sel = el('zone-col-select');
+  sel.innerHTML = '';
+  const noneOpt = document.createElement('option');
+  noneOpt.value = '';
+  noneOpt.textContent = 'ไม่แบ่งพื้นที่';
+  sel.appendChild(noneOpt);
+  currentHeaders.filter(h => h !== latCol && h !== lngCol).forEach(h => {
+    const opt = document.createElement('option');
+    opt.value = h;
+    opt.textContent = h;
+    sel.appendChild(opt);
+  });
+  sel.value = zoneCol || '';
+}
+
+el('zone-col-select').addEventListener('change', (e) => {
+  zoneCol = e.target.value || null;
+  selectedProvinceKeys = new Set();
+  computeZoneGrouping();
+  renderProvinceLayer();
+  renderZoneLegend();
+  rebuildMarkers();
+});
+
+el('clear-zone-btn').addEventListener('click', () => {
+  selectedProvinceKeys = new Set();
+  renderProvinceLayer();
+  renderZoneLegend();
+  rebuildMarkers();
+});
+
+// Fetch the province boundaries once, in the background, independent of
+// whether a file has already been uploaded.
+loadProvinceGeo().then(gj => {
+  provinceGeoJSON = gj;
+  if (!gj) return;
+  buildProvinceFeaturesList(gj);
+  if (currentRows.length){
+    computeZoneGrouping();
+    renderProvinceLayer();
+    renderZoneLegend();
+  }
+}).catch(() => { provinceGeoJSON = null; });
+
+function handleFile(file){
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+      if (!json.length){ setStatus('ไม่พบข้อมูลในไฟล์นี้', 'err'); return; }
+
+      currentHeaders = Object.keys(json[0]);
+      currentRows = json;
+      activeFilters = {};
+      searchTerm = '';
+      el('search-input').value = '';
+
+      resolveColumns();
+
+      if (!latCol || !lngCol){
+        setStatus('ไม่พบคอลัมน์พิกัด (ละติจูด/ลองจิจูด) ในไฟล์นี้ กรุณาตรวจสอบชื่อคอลัมน์ในไฟล์', 'err');
+        return;
+      }
+
+      el('file-name-label').textContent = `${file.name} • ${json.length.toLocaleString()} แถว`;
+      el('upload-stage').style.display = 'none';
+      el('dashboard-stage').style.display = 'block';
+      setStatus('', 'ok');
+
+      selectedProvinceKeys = new Set();
+      updateSearchUI();
+      buildFilters();
+      populateLegendColumnSelect();
+      populateZoneColumnSelect();
+      computeZoneGrouping();
+      renderProvinceLayer();
+      renderZoneLegend();
+      rebuildMarkers();
+    } catch (err){
+      console.error(err);
+      setStatus('อ่านไฟล์ไม่สำเร็จ ตรวจสอบว่าเป็นไฟล์ Excel หรือ CSV ที่ถูกต้อง', 'err');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+const collator = new Intl.Collator('th');
+
+function createSearchableDropdown(col, values){
+  const wrap = document.createElement('div');
+  wrap.className = 'dd';
+  wrap.dataset.col = col;
+
+  const input = document.createElement('input');
+  input.className = 'dd-input';
+  input.autocomplete = 'off';
+  input.placeholder = 'ทั้งหมด';
+  input.value = activeFilters[col] || '';
+
+  const list = document.createElement('div');
+  list.className = 'dd-list';
+
+  function renderList(filterText){
+    list.innerHTML = '';
+    const ft = (filterText || '').toLowerCase();
+
+    const allItem = document.createElement('div');
+    allItem.className = 'dd-item dd-all';
+    allItem.textContent = 'ทั้งหมด';
+    if (!activeFilters[col]) allItem.classList.add('selected');
+    allItem.addEventListener('mousedown', (e) => { e.preventDefault(); selectValue(''); });
+    list.appendChild(allItem);
+
+    const matched = values.filter(v => v.toLowerCase().includes(ft));
+    matched.forEach(v => {
+      const item = document.createElement('div');
+      item.className = 'dd-item';
+      item.textContent = v;
+      if (activeFilters[col] === v) item.classList.add('selected');
+      item.addEventListener('mousedown', (e) => { e.preventDefault(); selectValue(v); });
+      list.appendChild(item);
+    });
+
+    if (matched.length === 0){
+      const empty = document.createElement('div');
+      empty.className = 'dd-empty';
+      empty.textContent = 'ไม่พบผลลัพธ์';
+      list.appendChild(empty);
+    }
+  }
+
+  function selectValue(v){
+    if (v) activeFilters[col] = v; else delete activeFilters[col];
+    input.value = v;
+    wrap.classList.toggle('active-filter', !!v);
+    closeList();
+    rebuildMarkers();
+  }
+
+  function openList(){
+    renderList('');
+    wrap.classList.add('open');
+  }
+  function closeList(){
+    wrap.classList.remove('open');
+  }
+
+  wrap.classList.toggle('active-filter', !!activeFilters[col]);
+
+  input.addEventListener('focus', () => { input.select(); openList(); });
+  input.addEventListener('click', () => { if (!wrap.classList.contains('open')) openList(); });
+  input.addEventListener('input', () => { renderList(input.value); wrap.classList.add('open'); });
+  input.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ input.blur(); closeList(); } });
+  input.addEventListener('blur', () => { input.value = activeFilters[col] || ''; closeList(); });
+
+  wrap.appendChild(input);
+  wrap.appendChild(list);
+  return wrap;
+}
+
+document.addEventListener('mousedown', (e) => {
+  document.querySelectorAll('#filters-grid .dd.open').forEach(dd => {
+    if (!dd.contains(e.target)) dd.classList.remove('open');
+  });
+});
+
+function buildFilters(){
+  const grid = el('filters-grid');
+  grid.innerHTML = '';
+
+  // every column becomes a filter, except the coordinate columns and the project-name column
+  // (the project name is already searchable via the search box above)
+  const filterCols = currentHeaders.filter(h => h !== latCol && h !== lngCol && h !== nameCol && String(h).trim() !== 'ชื่อโครงการ');
+
+  filterCols.forEach(col => {
+    const valueSet = new Set();
+    currentRows.forEach(row => {
+      const v = row[col];
+      if (v !== '' && v !== null && v !== undefined) valueSet.add(String(v).trim());
+    });
+    if (valueSet.size === 0 || valueSet.size > MAX_FILTER_UNIQUE) return;
+
+    let values = Array.from(valueSet);
+    const allNumeric = values.every(v => !isNaN(parseFloat(v)) && isFinite(v));
+    values.sort(allNumeric ? (a,b) => parseFloat(a)-parseFloat(b) : (a,b) => collator.compare(a,b));
+
+    const field = document.createElement('div');
+    field.className = 'filter-field';
+    const label = document.createElement('label');
+    label.textContent = col;
+    label.title = col;
+
+    const dropdown = createSearchableDropdown(col, values);
+
+    field.appendChild(label);
+    field.appendChild(dropdown);
+    grid.appendChild(field);
+  });
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function rebuildMarkers(){
+  if (!latCol || !lngCol || !currentRows.length) return;
+
+  markersLayer.clearLayers();
+  categoryColorMap = {};
+  let colorIndex = 0;
+  let totalValid = 0, shown = 0, skipped = 0;
+  const bounds = [];
+
+  currentRows.forEach((row, rowIdx) => {
+    const lat = parseCoord(row[latCol]);
+    const lng = parseCoord(row[lngCol]);
+    if (lat === null || lng === null || lat < -90 || lat > 90 || lng < -180 || lng > 180){ skipped++; return; }
+    totalValid++;
+
+    const catValue = catCol ? String(row[catCol] ?? '').trim() : '';
+    const catKey = catValue || '(ไม่ระบุ)';
+    if (!(catKey in categoryColorMap)){
+      categoryColorMap[catKey] = COLOR_PALETTE[colorIndex % COLOR_PALETTE.length];
+      colorIndex++;
+    }
+
+    // search filter
+    if (searchTerm){
+      if (!nameCol) return;
+      const nameVal = String(row[nameCol] ?? '').toLowerCase();
+      if (!nameVal.includes(searchTerm)) return;
+    }
+
+    // dropdown filters
+    for (const [col, val] of Object.entries(activeFilters)){
+      const rowVal = String(row[col] ?? '').trim();
+      if (rowVal !== val) return;
+    }
+
+    // area-division filter: while a zone column is chosen, wait for the user
+    // to click a province before showing any pins at all; once a province is
+    // selected, show only the pins physically inside it
+    if (zoneCol){
+      if (selectedProvinceKeys.size === 0) return;
+      if (!selectedProvinceKeys.has(rowProvinceIndex[rowIdx])) return;
+    }
+
+    shown++;
+    bounds.push([lat, lng]);
+    const color = categoryColorMap[catKey];
+    const title = nameCol ? String(row[nameCol] ?? '').trim() : '';
+    const displayTitle = title || `จุดที่ ${shown}`;
+
+    const marker = L.circleMarker([lat, lng], {
+      radius: 6.5,
+      color: '#ffffff',
+      weight: 1.5,
+      fillColor: color,
+      fillOpacity: 0.9
+    });
+
+    let popupHtml = `<div class="popup-title">${escapeHtml(displayTitle)}</div>`;
+    if (catCol && catValue) popupHtml += `<span class="popup-cat" style="background:${color}">${escapeHtml(catValue)}</span>`;
+    currentHeaders.forEach(h => {
+      if (h === latCol || h === lngCol || h === nameCol || h === catCol) return;
+      const v = row[h];
+      if (v === '' || v === null || v === undefined) return;
+      popupHtml += `<div class="popup-field"><strong>${escapeHtml(h)}:</strong> ${escapeHtml(String(v))}</div>`;
+    });
+    marker.bindPopup(popupHtml);
+    markersLayer.addLayer(marker);
+  });
+
+  el('stat-total-big').textContent = totalValid.toLocaleString();
+  el('stat-shown-big').textContent = shown.toLocaleString();
+  el('skip-note').textContent = skipped > 0 ? `ข้าม ${skipped.toLocaleString()} แถวที่พิกัดไม่ถูกต้อง` : '';
+
+  renderLegend(catCol);
+
+  lastBounds = bounds;
+  const areaWaiting = !!zoneCol && selectedProvinceKeys.size === 0 && totalValid > 0;
+
+  if (bounds.length){
+    placeholder.style.display = 'none';
+    resetViewBtn.style.display = 'flex';
+    refreshMapSize();
+    setTimeout(() => { map.invalidateSize(); map.fitBounds(bounds, { padding: [40,40], maxZoom: 15 }); }, 30);
+  } else if (areaWaiting){
+    // area-division active, waiting for a province click — keep the colored
+    // province map visible; don't show the "no data" placeholder or reset view
+    placeholder.style.display = 'none';
+    resetViewBtn.style.display = 'none';
+  } else {
+    el('placeholder-title').textContent = 'ยังไม่มีข้อมูลบนแผนที่';
+    el('placeholder-text').textContent = 'อัปโหลดไฟล์ Excel ทางด้านซ้ายเพื่อเริ่มปักหมุด';
+    placeholder.style.display = 'flex';
+    resetViewBtn.style.display = 'none';
+  }
+}
+
+function renderLegend(catCol){
+  const legendList = el('legend-list');
+  legendList.innerHTML = '';
+  const entries = Object.entries(categoryColorMap);
+  if (!catCol || !entries.length){
+    legendList.innerHTML = '<div class="legend-empty">เลือกคอลัมน์ด้านบนเพื่อแบ่งสีจุดตามหมวดหมู่</div>';
+    return;
+  }
+
+  const counts = {};
+  currentRows.forEach(row => {
+    const lat = parseCoord(row[latCol]), lng = parseCoord(row[lngCol]);
+    if (lat === null || lng === null) return;
+    const catValue = String(row[catCol] ?? '').trim();
+    const catKey = catValue || '(ไม่ระบุ)';
+    counts[catKey] = (counts[catKey] || 0) + 1;
+  });
+
+  entries.forEach(([label, color]) => {
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    item.innerHTML = `<span class="legend-dot" style="background:${color}"></span><span>${escapeHtml(label)}</span><span class="legend-count">${(counts[label]||0).toLocaleString()}</span>`;
+    legendList.appendChild(item);
+  });
+}
+
+function populateLegendColumnSelect(){
+  const sel = el('legend-col-select');
+  sel.innerHTML = '';
+  const noneOpt = document.createElement('option');
+  noneOpt.value = '';
+  noneOpt.textContent = 'ไม่แบ่งสี';
+  sel.appendChild(noneOpt);
+  currentHeaders.filter(h => h !== latCol && h !== lngCol).forEach(h => {
+    const opt = document.createElement('option');
+    opt.value = h;
+    opt.textContent = h;
+    sel.appendChild(opt);
+  });
+  sel.value = catCol || '';
+}
+
+el('legend-col-select').addEventListener('change', (e) => {
+  catCol = e.target.value || null;
+  rebuildMarkers();
+});
+
+function updateSearchUI(){
+  const input = el('search-input');
+  if (nameCol){
+    input.disabled = false;
+    input.placeholder = `ค้นหา${nameCol}...`;
+  } else {
+    input.disabled = true;
+    input.placeholder = 'ไม่พบคอลัมน์ชื่อโครงการในไฟล์นี้';
+  }
+}
+</script>
+</body>
+</html>
