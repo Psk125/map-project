@@ -3,1231 +3,2030 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>แผนที่โครงการ</title>
-<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<title>ระบบเฝ้าระวังแหล่งกำเนิดมลพิษ | กทม. + สคพ.</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.min.css" />
+
 <style>
-  :root{
-    --bg:#eef4f1;
-    --panel:#ffffff;
-    --card:#f2f8f5;
-    --card-hover:#e3f0e9;
-    --border:#dce8e2;
-    --accent:#3f9c79;
-    --accent-strong:#2e7a5c;
-    --accent-soft:rgba(63,156,121,.10);
-    --text:#1c2622;
-    --text-muted:#5f7269;
-    --text-faint:#94a89d;
-    --danger:#d1453a;
-    --danger-soft:rgba(209,69,58,.08);
-    --ok:#2e7a5c;
-    --head1:#2e7a5c;
-    --head2:#1f6f8b;
-    --head3:#3f9c79;
-    --head4:#7a8f2e;
-    --head5:#8a5fc9;
-  }
-  *{box-sizing:border-box;}
-  html,body{
-    margin:0;padding:0;height:100%;
-    font-family:"Prompt","Segoe UI",sans-serif;
-    background:var(--bg);
-    color:var(--text);
-  }
-  #app{ display:flex; height:100vh; width:100vw; }
+:root{
+  --bg:#EEF3F1;
+  --bg-elev:#FFFFFF;
+  --bg-sunken:#E3EBE8;
+  --ink:#0E241F;
+  --ink-soft:#4B5D58;
+  --ink-faint:#7C8B87;
+  --line:#D4DEDA;
+  --line-strong:#B9C7C2;
+  --brand:#0E7C66;
+  --brand-dark:#0A5D4D;
+  --brand-soft:#DCEEE8;
+  --info:#1C6E8C;
+  --info-soft:#DCEAF0;
+  --warn:#C1440E;
+  --warn-soft:#F7E2D8;
+  --amber:#B8860B;
+  --shadow: 0 1px 2px rgba(14,36,31,0.04), 0 8px 24px -12px rgba(14,36,31,0.14);
+  --radius: 14px;
+  --font-display:'Chakra Petch', 'IBM Plex Sans Thai', sans-serif;
+  --font-body:'IBM Plex Sans Thai', 'Noto Sans Thai', sans-serif;
+  --font-mono:'IBM Plex Mono', ui-monospace, monospace;
+}
+html.dark{
+  --bg:#0B1815;
+  --bg-elev:#122622;
+  --bg-sunken:#0E1F1B;
+  --ink:#E7F1EE;
+  --ink-soft:#A9BDB7;
+  --ink-faint:#728881;
+  --line:#1E3A34;
+  --line-strong:#2A4C44;
+  --brand:#3FC29E;
+  --brand-dark:#2E9C7E;
+  --brand-soft:#123329;
+  --info:#5FB3D6;
+  --info-soft:#0F2C36;
+  --warn:#F0704A;
+  --warn-soft:#3A1D12;
+  --amber:#E0B44B;
+  --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px -14px rgba(0,0,0,0.6);
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--font-body);
+  font-size:14.5px;
+  line-height:1.55;
+  transition:background .25s ease, color .25s ease;
+  -webkit-font-smoothing:antialiased;
+}
+::selection{background:var(--brand); color:#fff;}
+a{color:inherit;}
+.wrap{max-width:1440px; margin:0 auto; padding:0 22px;}
 
-  /* ---------- sidebar ---------- */
-  #sidebar{
-    position:relative;
-    width:352px;
-    min-width:352px;
-    background:var(--panel);
-    border-right:1px solid var(--border);
-    display:flex;
-    flex-direction:column;
-    overflow:hidden;
-    transition:width .22s ease, min-width .22s ease;
-  }
-  #sidebar.collapsed{ width:60px; min-width:60px; }
-  #sidebar.collapsed #sidebar-scroll{ display:none; }
-  #sidebar-scroll{ overflow-y:auto; flex:1; padding:22px 18px 32px; }
-  #sidebar.resizing{ transition:none; }
+/* ---------- Header ---------- */
+header.topbar{
+  position:sticky; top:0; z-index:50;
+  background:var(--bg-elev);
+  border-bottom:1px solid var(--line);
+  backdrop-filter:blur(8px);
+}
+.topbar-inner{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 0; gap:16px; flex-wrap:wrap;
+}
+.brand-block{display:flex; align-items:center; gap:12px;}
+.brand-mark{
+  width:96px; height:96px; border-radius:18px;
+  background:linear-gradient(155deg, #ffffff 0%, #eef6f2 100%);
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0; padding:8px;
+  border:1px solid var(--line);
+  box-shadow:var(--shadow), inset 0 0 0 1px rgba(255,255,255,.7);
+}
+.brand-mark svg{width:100%; height:100%; filter:drop-shadow(0 1px 1.5px rgba(14,36,31,.14));}
+.brand-text .eyebrow{
+  font-family:var(--font-mono); font-size:11.5px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--brand); font-weight:600;
+}
+.brand-text h1{
+  font-family:var(--font-display); font-size:25px; font-weight:600;
+  margin:2px 0 0; letter-spacing:.01em; color:var(--ink);
+}
+.status-cluster{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+.pulse-chip{
+  display:flex; align-items:center; gap:7px;
+  font-family:var(--font-mono); font-size:11.5px; color:var(--ink-soft);
+  background:var(--bg-sunken); border:1px solid var(--line);
+  padding:6px 11px; border-radius:100px;
+}
+.pulse-dot{width:7px; height:7px; border-radius:50%; background:var(--brand); position:relative; flex-shrink:0;}
+.pulse-dot::after{
+  content:''; position:absolute; inset:-4px; border-radius:50%;
+  border:1.5px solid var(--brand); animation:pulse 2.2s ease-out infinite;
+}
+@keyframes pulse{0%{transform:scale(.5); opacity:.9;} 100%{transform:scale(1.9); opacity:0;}}
+.icon-btn{
+  width:36px; height:36px; border-radius:10px; border:1px solid var(--line);
+  background:var(--bg-sunken); color:var(--ink-soft); cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:all .15s ease;
+}
+.icon-btn:hover{border-color:var(--brand); color:var(--brand); transform:translateY(-1px);}
+.icon-btn svg{width:17px; height:17px;}
+.btn{
+  font-family:var(--font-body); font-weight:500; font-size:13px;
+  border-radius:10px; border:1px solid var(--line); cursor:pointer;
+  padding:9px 14px; display:inline-flex; align-items:center; gap:7px;
+  background:var(--bg-sunken); color:var(--ink); transition:all .15s ease;
+}
+.btn:hover{border-color:var(--line-strong); transform:translateY(-1px);}
+.btn.primary{background:var(--brand); border-color:var(--brand); color:#fff;}
+.btn.primary:hover{background:var(--brand-dark);}
+.btn svg{width:15px; height:15px;}
+#fileInput{display:none;}
 
-  /* ---------- resize handle ---------- */
-  #sidebar-resize-handle{
-    position:absolute; top:0; right:-4px; width:8px; height:100%;
-    cursor:col-resize; z-index:29; background:transparent;
-  }
-  #sidebar-resize-handle::after{
-    content:""; position:absolute; top:0; right:3px; width:2px; height:100%;
-    background:transparent; transition:background .15s;
-  }
-  #sidebar-resize-handle:hover::after,
-  #sidebar.resizing #sidebar-resize-handle::after{ background:var(--accent); }
-  #sidebar.collapsed #sidebar-resize-handle{ display:none; }
-  body.sidebar-resizing{ cursor:col-resize; user-select:none; }
+/* ---------- Google Sheet connect ---------- */
+.gsheet-wrap{position:relative;}
+.gsheet-live-dot{width:6px; height:6px; border-radius:50%; background:var(--ink-faint); flex-shrink:0;}
+.gsheet-live-dot.on{background:var(--brand); box-shadow:0 0 0 3px var(--brand-soft);}
+.gsheet-panel[hidden]{display:none;}
+.gsheet-panel{
+  position:absolute; top:calc(100% + 8px); right:0; width:360px; z-index:60;
+  background:var(--bg-elev); border:1px solid var(--line); border-radius:12px;
+  box-shadow:var(--shadow); padding:16px;
+}
+.gsheet-panel label{font-size:11.5px; color:var(--ink-soft); display:block; margin-bottom:6px;}
+.gsheet-panel input[type=text]{
+  width:100%; font-family:var(--font-body); font-size:13px; color:var(--ink);
+  background:var(--bg-sunken); border:1px solid var(--line); border-radius:8px;
+  padding:8px 10px; margin-bottom:4px;
+}
+.gsheet-panel input[type=text]:focus{outline:2px solid var(--brand); outline-offset:1px;}
+.gsheet-hint{font-size:11px; color:var(--ink-faint); margin-bottom:10px; line-height:1.5;}
+.gsheet-hint a{color:var(--brand); text-decoration:underline; text-underline-offset:2px;}
+.gsheet-actions{display:flex; gap:8px;}
+.gsheet-actions .btn{padding:8px 12px; font-size:12.5px;}
+.gsheet-msg{font-size:11.5px; margin-top:10px; line-height:1.5;}
+.gsheet-msg.ok{color:var(--brand-dark);}
+.gsheet-msg.err{color:var(--warn);}
+.gsheet-step{margin-bottom:4px;}
+#gAuthBtn{width:100%; justify-content:center; margin-top:2px;}
+.gsheet-refresh-row{
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  background:var(--bg-sunken); border:1px solid var(--line); border-radius:8px;
+  padding:8px 10px; margin-bottom:12px; font-size:11.5px; color:var(--ink-soft);
+}
+.gsheet-refresh-row button{
+  font-family:var(--font-body); font-size:11.5px; color:var(--brand); background:none;
+  border:none; cursor:pointer; text-decoration:underline; text-underline-offset:2px; padding:0;
+}
+.gsheet-fallback-details{
+  margin-top:12px; padding-top:12px; border-top:1px solid var(--line);
+}
+.gsheet-fallback-details summary{
+  font-size:11.5px; color:var(--ink-soft); cursor:pointer; list-style:none;
+}
+.gsheet-fallback-details summary::-webkit-details-marker{display:none;}
+.gsheet-fallback-details summary:hover{color:var(--brand);}
+.gsheet-fallback-details[open] summary{margin-bottom:10px;}
+.gsheet-fallback{
+  font-size:11.5px; color:var(--ink-faint); margin-top:12px; padding-top:12px;
+  border-top:1px solid var(--line);
+}
+.link-like{color:var(--brand); text-decoration:underline; text-underline-offset:2px; cursor:pointer;}
 
-  #sidebar-toggle{
-    position:absolute; top:50%; right:-14px; transform:translateY(-50%); width:28px; height:28px;
-    border-radius:50%; background:var(--panel); border:1px solid var(--border);
-    display:flex; align-items:center; justify-content:center; cursor:pointer;
-    z-index:30; color:var(--text-muted); box-shadow:0 2px 10px rgba(30,50,40,.15);
-    transition:color .15s, border-color .15s;
-  }
-  #sidebar-toggle:hover{ color:var(--accent); border-color:var(--accent); }
-  #sidebar-toggle svg{ width:13px; height:13px; transition:transform .22s ease; }
-  #sidebar.collapsed #sidebar-toggle svg{ transform:rotate(180deg); }
+/* ---------- Advanced filters toggle ---------- */
+.filter-adv-panel{
+  flex-wrap:wrap; gap:14px 18px; align-items:end;
+  margin-top:12px; padding:14px 16px 4px; border-top:1px dashed var(--line);
+}
+.filter-adv-panel:not([hidden]){display:flex;}
+.filter-adv-toggle{
+  display:inline-flex; align-items:center; gap:7px; font-size:12.5px; font-weight:500;
+  color:var(--ink-soft); background:var(--bg-sunken); border:1px solid var(--line); cursor:pointer;
+  font-family:var(--font-body); padding:8px 13px; border-radius:9px; transition:all .15s ease;
+}
+.filter-adv-toggle:hover{color:var(--brand); border-color:var(--brand);}
+.filter-adv-toggle.open{color:var(--brand); border-color:var(--brand); background:var(--brand-soft);}
+.filter-adv-toggle svg{width:14px; height:14px;}
+.filter-adv-toggle .chevron{width:12px; height:12px; transition:transform .15s ease;}
+.filter-adv-toggle.open .chevron{transform:rotate(180deg);}
 
-  #sidebar-collapsed-icon{
-    display:none; width:26px;height:26px;border-radius:8px;
-    background:linear-gradient(135deg,var(--accent),var(--accent-strong));
-    align-items:center; justify-content:center; margin:18px auto 0; flex-shrink:0;
-  }
-  #sidebar-collapsed-icon svg{ width:15px;height:15px;color:#fff; }
-  #sidebar.collapsed #sidebar-collapsed-icon{ display:flex; }
-  ::-webkit-scrollbar{ width:8px; }
-  ::-webkit-scrollbar-thumb{ background:var(--border); border-radius:4px; }
+/* ---------- Chart tabs ---------- */
+.chart-tabs{display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap;}
+.chart-tabs button{
+  font-family:var(--font-body); font-size:12.5px; font-weight:500; color:var(--ink-soft);
+  background:var(--bg-elev); border:1px solid var(--line); border-radius:9px;
+  padding:8px 14px; cursor:pointer; transition:all .15s ease;
+}
+.chart-tabs button:hover{border-color:var(--line-strong);}
+.chart-tabs button.active{background:var(--brand); border-color:var(--brand); color:#fff;}
+.chart-pane{display:none;}
+.chart-pane.active{display:block;}
 
-  .brand{ display:flex; align-items:center; gap:9px; margin-bottom:18px; }
-  .brand-mark{
-    width:26px;height:26px;border-radius:8px;
-    background:linear-gradient(135deg,var(--accent),var(--accent-strong));
-    display:flex;align-items:center;justify-content:center;
-    flex-shrink:0;
-  }
-  .brand-mark svg{ width:15px;height:15px;color:#fff; }
-  .brand h1{ font-size:16.5px; font-weight:600; margin:0; letter-spacing:-.01em; }
+/* ---------- Filters ---------- */
+.filterbar{
+  position:sticky; top:var(--header-h, 67px); z-index:40;
+  background:var(--bg); border-bottom:1px solid var(--line);
+  padding:14px 0 16px;
+}
+.filter-shell{
+  background:var(--bg-elev); border:1px solid var(--line); border-radius:var(--radius);
+  box-shadow:var(--shadow); padding:14px 16px 16px;
+}
+.filter-title-row{
+  display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;
+  margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid var(--line);
+}
+.filter-body[hidden]{display:none;}
+.filter-collapse-toggle{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:28px; height:28px; border-radius:8px; border:1px solid var(--line);
+  background:var(--bg-sunken); color:var(--ink-soft); cursor:pointer; padding:0;
+  transition:all .15s ease;
+}
+.filter-collapse-toggle:hover{color:var(--brand); border-color:var(--brand);}
+.filter-collapse-toggle svg{width:14px; height:14px; transition:transform .15s ease;}
+.filter-collapse-toggle.collapsed svg{transform:rotate(-90deg);}
+.filter-title{
+  display:flex; align-items:center; gap:8px;
+  font-family:var(--font-display); font-size:14px; font-weight:600; color:var(--ink);
+}
+.filter-title svg{width:16px; height:16px; color:var(--brand);}
+.filter-row{display:flex; flex-wrap:wrap; gap:16px 20px; align-items:end;}
+.filter-actions-row{
+  display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+  margin-top:14px;
+}
+.field-group{display:flex; flex-direction:column; gap:6px;}
+.field-group-grow{flex:1 1 260px;}
+.field-label{
+  font-family:var(--font-mono); font-size:10px; text-transform:uppercase;
+  letter-spacing:.09em; color:var(--ink-faint); font-weight:600;
+}
+select, .search-input{
+  font-family:var(--font-body); font-size:13px; color:var(--ink);
+  background:var(--bg-sunken); border:1px solid var(--line); border-radius:9px;
+  padding:9px 32px 9px 12px; cursor:pointer; appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237C8B87' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 12px center;
+  transition:border-color .15s ease, box-shadow .15s ease;
+}
+select:hover, .search-input:hover{border-color:var(--line-strong);}
+select:focus, .search-input:focus{outline:none; border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-soft);}
+.search-input{padding:9px 13px; width:100%; min-width:190px; background-image:none;}
+.year-range{
+  display:flex; align-items:center; gap:8px;
+  background:var(--bg-sunken); border:1px solid var(--line); border-radius:9px;
+  padding:8px 12px;
+}
+.year-range span{font-family:var(--font-mono); font-size:12px; color:var(--ink-soft); min-width:32px; text-align:center; font-weight:600;}
+.year-range input[type=range]{width:90px; accent-color:var(--brand);}
+.chip-toggle{
+  display:flex; border:1px solid var(--line); border-radius:9px; overflow:hidden;
+}
+.chip-toggle button{
+  border:none; background:var(--bg-sunken); color:var(--ink-soft); font-size:12.5px; font-weight:500;
+  font-family:var(--font-body); padding:9px 13px; cursor:pointer; border-right:1px solid var(--line);
+  transition:all .15s ease;
+}
+.chip-toggle button:last-child{border-right:none;}
+.chip-toggle button:hover:not(.active){color:var(--ink); background:var(--bg-elev);}
+.chip-toggle button.active{background:var(--brand); color:#fff;}
+.reset-link{
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:12.5px; font-weight:500; color:var(--warn); cursor:pointer;
+  background:var(--warn-soft); border:1px solid transparent;
+  padding:8px 13px; border-radius:9px; font-family:var(--font-body); transition:all .15s ease;
+}
+.reset-link svg{width:13px; height:13px;}
+.reset-link:hover{border-color:var(--warn); background:var(--bg-elev);}
+.result-count{
+  font-family:var(--font-mono); font-size:12.5px; color:var(--ink-soft); white-space:nowrap;
+}
+.result-count b{color:var(--brand); font-weight:700; font-size:14px;}
 
-  /* upload stage */
-  .upload-zone{
-    border:1.5px dashed var(--border);
-    border-radius:14px;
-    padding:26px 18px;
-    text-align:center;
-    cursor:pointer;
-    transition:border-color .15s, background .15s;
-    background:var(--card);
-  }
-  .upload-zone:hover, .upload-zone.drag{ border-color:var(--accent); background:var(--card-hover); }
-  .upload-zone svg{ width:28px;height:28px;color:var(--accent); margin-bottom:8px; }
-  .upload-title{ font-size:14px; font-weight:600; }
-  .upload-hint{ font-size:11.5px; color:var(--text-muted); margin-top:4px; }
-  #file-input{ display:none; }
+/* ---------- Layout sections ---------- */
+main{padding:26px 0 60px;}
+.section-title{
+  font-family:var(--font-display); font-size:15.5px; font-weight:600;
+  display:flex; align-items:center; gap:9px; margin:0 0 14px;
+  color:var(--ink);
+}
+.section-title .num{
+  font-family:var(--font-mono); font-size:11px; color:var(--brand);
+  border:1px solid var(--brand); border-radius:5px; padding:1px 6px;
+}
+section{margin-bottom:34px;}
 
-  .status-line{
-    font-size:12px; margin-top:10px; padding:9px 11px;
-    border-radius:9px; display:none; line-height:1.55;
-  }
-  .status-line.ok{ display:block; background:var(--accent-soft); color:var(--accent-strong); }
-  .status-line.err{ display:block; background:var(--danger-soft); color:var(--danger); }
+/* ---------- Hero: gauge + KPIs ---------- */
+.hero-grid{
+  display:grid; grid-template-columns:300px 1fr; gap:16px;
+}
+.gauge-card, .kpi-card, .chart-card, .map-card, .table-card{
+  background:var(--bg-elev); border:1px solid var(--line); border-radius:var(--radius);
+  box-shadow:var(--shadow);
+}
+.gauge-card{
+  padding:20px; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  position:relative; overflow:hidden;
+}
+.gauge-card::before{
+  content:''; position:absolute; inset:0; opacity:.5; pointer-events:none;
+  background-image:radial-gradient(circle at 1px 1px, var(--line) 1px, transparent 0);
+  background-size:16px 16px; mask-image:linear-gradient(to bottom, transparent, black 40%);
+}
+.gauge-wrap{position:relative; z-index:1; width:220px;}
+.gauge-value{
+  position:absolute; left:0; right:0; top:58%; transform:translateY(-50%);
+  text-align:center;
+}
+.gauge-value .num{font-family:var(--font-mono); font-size:35px; font-weight:600; color:var(--brand); line-height:1;}
+.gauge-value .lbl{font-size:11.5px; color:var(--ink-soft); margin-top:5px;}
+.gauge-legend{display:flex; gap:16px; margin-top:6px; z-index:1; position:relative;}
+.gauge-legend .item{display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ink-soft);}
+.gauge-legend .dot{width:8px; height:8px; border-radius:2px;}
 
-  .file-format-note{
-    font-size:11.5px; color:var(--text-muted); line-height:1.7; margin-top:16px;
-  }
-  .file-format-note code{
-    background:var(--card); padding:1px 6px; border-radius:5px; font-size:11px; color:var(--text);
-  }
+.kpi-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:12px;}
+.kpi-card{padding:16px 18px; display:flex; flex-direction:column; gap:8px; justify-content:space-between;}
+.kpi-card .kpi-top{display:flex; align-items:center; justify-content:space-between;}
+.kpi-card .kpi-label{font-size:12px; color:var(--ink-soft);}
+.kpi-card .kpi-icon{width:26px; height:26px; border-radius:7px; display:flex; align-items:center; justify-content:center;}
+.kpi-card .kpi-icon svg{width:14px; height:14px;}
+.kpi-card .kpi-value{font-family:var(--font-mono); font-size:27px; font-weight:600; color:var(--ink);}
+.kpi-card .kpi-sub{font-size:11.5px; color:var(--ink-faint);}
+.kpi-card .kpi-sub.up{color:var(--brand);}
+.kpi-card .kpi-sub.down{color:var(--warn);}
 
-  /* dashboard stage */
-  #dashboard-stage{ display:none; }
+/* ---------- Charts ---------- */
+.charts-grid{display:grid; grid-template-columns:1.3fr 1fr; gap:14px;}
+.charts-grid-2{display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin-top:14px;}
+.chart-card{padding:16px 18px 10px;}
+.chart-card h3{
+  font-family:var(--font-display); font-size:13.5px; font-weight:600; margin:0 0 2px; color:var(--ink);
+}
+.chart-card p.hint{font-size:11.5px; color:var(--ink-faint); margin:0 0 10px;}
+.chart-canvas-wrap{position:relative; height:230px;}
+.chart-canvas-wrap.tall{height:280px;}
 
-  .file-row{
-    display:flex; align-items:center; justify-content:space-between;
-    margin-bottom:4px; gap:10px;
-  }
-  #file-name-label{
-    font-size:12px; color:var(--text-muted);
-    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  }
-  #change-file-btn{
-    font-family:inherit; font-size:11.5px; font-weight:500;
-    color:var(--accent); background:none; border:none; cursor:pointer;
-    padding:4px 0; flex-shrink:0;
-  }
-  #change-file-btn:hover{ text-decoration:underline; }
+/* ---------- Map ---------- */
+.map-card{padding:0; overflow:hidden; position:relative; z-index:0;}
+.map-card.is-fullscreen{
+  position:fixed; inset:16px; z-index:200; border-radius:var(--radius);
+  box-shadow:0 20px 60px -10px rgba(0,0,0,.45);
+  display:flex; flex-direction:column;
+}
+.map-card.is-fullscreen #map{flex:1 1 auto; height:auto !important;}
+.map-fullscreen-backdrop{
+  display:none; position:fixed; inset:0; z-index:190;
+  background:rgba(6,14,12,.55); backdrop-filter:blur(2px);
+}
+.map-fullscreen-backdrop.show{display:block;}
+#mapExpandBtn svg{width:13px; height:13px;}
+.map-head{
+  display:flex; align-items:center; justify-content:space-between; padding:15px 18px 0; gap:10px; flex-wrap:wrap;
+}
+#mapResetBtn{padding:7px 12px; font-size:12px; flex-shrink:0;}
+#mapResetBtn svg{width:13px; height:13px;}
+#map{height:460px; width:100%; margin-top:12px;}
+.map-legend{
+  display:flex; gap:14px; padding:10px 18px 15px; font-size:12px; color:var(--ink-soft); flex-wrap:wrap;
+}
+.map-legend .item{display:flex; align-items:center; gap:6px;}
+.map-legend .dot{width:10px; height:10px; border-radius:50%;}
+.leaflet-popup-content-wrapper{background:var(--bg-elev); color:var(--ink); border-radius:10px;}
+.leaflet-popup-tip{background:var(--bg-elev);}
+.map-popup .p-name{font-family:var(--font-display); font-weight:600; font-size:13px; margin-bottom:4px;}
+.map-popup .p-row{font-size:12px; color:var(--ink-soft); margin:1px 0;}
+.map-popup .p-badge{
+  display:inline-block; font-size:10.5px; font-family:var(--font-mono); padding:2px 7px;
+  border-radius:100px; margin-top:5px;
+}
 
-  #skip-note{ font-size:11px; color:var(--text-faint); margin-bottom:14px; }
+/* ---------- Chart click-to-view detail modal ---------- */
+.chart-canvas-wrap canvas{cursor:pointer;}
+.chart-detail-overlay{
+  position:fixed; inset:0; z-index:80; background:rgba(14,36,31,.45);
+  display:flex; align-items:center; justify-content:center; padding:20px;
+}
+.chart-detail-overlay[hidden]{display:none;}
+.chart-detail-modal{
+  width:100%; max-width:560px; max-height:min(78vh,640px);
+  background:var(--bg-elev); border:1px solid var(--line); border-radius:var(--radius);
+  box-shadow:var(--shadow); display:flex; flex-direction:column; overflow:hidden;
+}
+.chart-detail-head{
+  display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+  padding:16px 18px; border-bottom:1px solid var(--line); flex-shrink:0;
+}
+.chart-detail-title{font-family:var(--font-display); font-size:14.5px; font-weight:600; color:var(--ink);}
+.chart-detail-sub{font-size:12px; color:var(--ink-soft); margin-top:3px;}
+.chart-detail-list{overflow:auto; padding:6px 18px 18px;}
+.chart-detail-row{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:10px 0; border-bottom:1px solid var(--line);
+}
+.chart-detail-row:last-child{border-bottom:none;}
+.chart-detail-row .name{font-size:13px; color:var(--ink); font-weight:500;}
+.chart-detail-row .meta{font-size:11.5px; color:var(--ink-faint); margin-top:2px;}
+.chart-detail-more{
+  text-align:center; padding:10px 0 2px; font-size:12px; color:var(--ink-faint);
+}
+.chart-detail-empty{padding:20px 0; text-align:center; color:var(--ink-faint); font-size:13px;}
 
-  .stat-grid{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; margin-bottom:18px; }
-  .stat-card{
-    background:var(--card); border:1px solid var(--border); border-radius:14px;
-    padding:14px 16px; min-width:0;
-  }
-  .stat-label{ font-size:12px; color:var(--text-muted); margin-bottom:6px; }
-  .stat-value{
-    font-size:28px; font-weight:700; color:var(--accent);
-    letter-spacing:-.02em; font-variant-numeric:tabular-nums;
-  }
+/* ---------- Table ---------- */
+.table-card{padding:18px 20px 8px;}
+.table-head{display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:12px;}
+.table-scroll{overflow:auto; max-height:420px; border:1px solid var(--line); border-radius:10px;}
+table{width:100%; border-collapse:collapse; font-size:12.5px;}
+thead th{
+  position:sticky; top:0; background:var(--bg-sunken); text-align:left; padding:10px 12px;
+  font-family:var(--font-mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.06em;
+  color:var(--ink-soft); border-bottom:1px solid var(--line); cursor:pointer; white-space:nowrap; z-index:1;
+}
+thead th:hover{color:var(--brand);}
+tbody td{padding:9px 12px; border-bottom:1px solid var(--line); color:var(--ink); white-space:nowrap;}
+tbody tr:hover{background:var(--bg-sunken);}
+.badge{
+  display:inline-flex; align-items:center; gap:5px; font-size:11px; padding:3px 9px; border-radius:100px;
+  font-family:var(--font-mono);
+}
+.badge.ok{background:var(--brand-soft); color:var(--brand-dark);}
+.badge.bad{background:var(--warn-soft); color:var(--warn);}
+.pager{display:flex; align-items:center; gap:10px; padding:12px 2px; font-size:12.5px; color:var(--ink-soft);}
+.pager button{
+  border:1px solid var(--line); background:var(--bg-sunken); border-radius:7px; padding:5px 10px;
+  cursor:pointer; color:var(--ink-soft);
+}
+.pager button:disabled{opacity:.4; cursor:not-allowed;}
 
-  .search-wrap{ position:relative; margin-bottom:22px; }
-  .search-wrap svg{
-    position:absolute; left:13px; top:50%; transform:translateY(-50%);
-    width:16px;height:16px; color:var(--text-faint); pointer-events:none;
-  }
-  #search-input{
-    width:100%; font-family:inherit; font-size:13.5px;
-    background:var(--card); border:1px solid var(--border); border-radius:11px;
-    padding:11px 14px 11px 38px; color:var(--text); outline:none;
-    transition:border-color .15s;
-  }
-  #search-input::placeholder{ color:var(--text-faint); }
-  #search-input:focus{ border-color:var(--accent); }
-  #search-input:disabled{ opacity:.55; cursor:not-allowed; }
+/* ---------- Footer ---------- */
+footer{
+  border-top:1px solid var(--line); padding:22px 0 30px; margin-top:10px;
+  font-size:12px; color:var(--ink-faint);
+}
+footer .foot-grid{display:flex; justify-content:space-between; gap:20px; flex-wrap:wrap;}
+footer strong{color:var(--ink-soft);}
+footer a{text-decoration:underline; text-underline-offset:2px;}
 
-  .filters-head{
-    display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;
-  }
-  .section-label{
-    font-size:11px; text-transform:uppercase; letter-spacing:.06em;
-    color:var(--text-muted); font-weight:600;
-  }
-  #clear-filters-btn{
-    font-family:inherit; font-size:11.5px; color:var(--text-muted);
-    background:none; border:none; cursor:pointer; padding:2px 0;
-  }
-  #clear-filters-btn:hover{ color:var(--accent); }
+.empty-state{
+  padding:40px; text-align:center; color:var(--ink-faint); font-size:13px;
+}
 
-  /* colored section headers */
-  .section-header{ display:flex; align-items:center; gap:8px; margin-bottom:12px; }
-  .section-header .bar{ width:4px; height:14px; border-radius:3px; flex-shrink:0; }
-  .section-header .section-label{ margin:0; }
-  .section-header.h1 .bar{ background:var(--head1); }
-  .section-header.h2 .bar{ background:var(--head2); }
-  .section-header.h3 .bar{ background:var(--head3); }
-  .section-header.h4 .bar{ background:var(--head4); }
-  .section-header.h5 .bar{ background:var(--head5); }
-  .filters-head.section-header{ justify-content:space-between; }
-  .filters-head.section-header .left{ display:flex; align-items:center; gap:8px; }
-  .legend-header{ justify-content:space-between; margin-bottom:14px; }
-  .legend-col-select{
-    font-family:inherit; font-size:11.5px; font-weight:500;
-    color:var(--accent-strong); background:var(--accent-soft);
-    border:1px solid var(--border); border-radius:8px;
-    padding:5px 24px 5px 10px; cursor:pointer; outline:none;
-    appearance:none; -webkit-appearance:none; max-width:150px;
-    text-overflow:ellipsis;
-    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%232e7a5c' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
-    background-repeat:no-repeat; background-position:right 8px center;
-  }
-  .legend-col-select:hover{ border-color:var(--accent); }
-  .legend-empty{ font-size:12px; color:var(--text-faint); line-height:1.6; padding:4px 0 2px; }
+@media (max-width:1080px){
+  .hero-grid{grid-template-columns:1fr;}
+  .kpi-grid{grid-template-columns:repeat(2,1fr);}
+  .charts-grid{grid-template-columns:1fr;}
+  .charts-grid-2{grid-template-columns:1fr;}
+}
+@media (max-width:640px){
+  .kpi-grid{grid-template-columns:1fr 1fr;}
+  #map{height:340px;}
+  .filter-row{gap:12px;}
+  .field-group-grow{flex-basis:100%;}
+  .filter-title-row{align-items:flex-start;}
+  .map-head{flex-direction:column; align-items:flex-start;}
+  #mapResetBtn{align-self:flex-end;}
+  .chart-canvas-wrap{height:300px;}
+  .chart-canvas-wrap.tall{height:360px;}
+  .charts-grid-2 .chart-canvas-wrap{height:230px;}
+}
 
-  .filters-grid{
-    display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:14px 12px;
-    margin-bottom:8px;
-  }
-  .filter-field{ min-width:0; }
-  .filter-field label{
-    display:block; font-size:12px; color:var(--text-muted); margin-bottom:6px;
-    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  }
-  /* searchable dropdown ("dd") replacing native <select> */
-  .dd{ position:relative; min-width:0; }
-  .dd-input{
-    width:100%; font-family:inherit; font-size:13px; font-weight:500;
-    color:var(--text); background:var(--card);
-    border:1px solid var(--border); border-radius:10px;
-    padding:9px 30px 9px 12px; cursor:pointer; outline:none;
-    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%235f7269' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
-    background-repeat:no-repeat; background-position:right 12px center;
-    transition:border-color .15s, background-color .15s;
-  }
-  .dd-input::placeholder{ color:var(--text); opacity:1; font-weight:500; }
-  .dd-input:hover{ background-color:var(--card-hover); }
-  .dd-input:focus{ border-color:var(--accent); background-color:var(--panel); }
-  .dd.active-filter .dd-input{ border-color:var(--accent); color:var(--accent-strong); background-color:var(--accent-soft); }
-  .dd.open .dd-input{ border-color:var(--accent); border-bottom-left-radius:0; border-bottom-right-radius:0; }
-  .dd-list{
-    display:none; position:absolute; left:0; right:0; top:100%; z-index:25;
-    max-height:220px; overflow-y:auto; background:var(--panel);
-    border:1px solid var(--accent); border-top:none;
-    border-radius:0 0 10px 10px; box-shadow:0 10px 24px rgba(30,50,40,.15);
-  }
-  .dd.open .dd-list{ display:block; }
-  .dd-item{
-    padding:8px 12px; font-size:12.5px; cursor:pointer; color:var(--text);
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  }
-  .dd-item:hover, .dd-item.hl{ background:var(--card-hover); }
-  .dd-item.selected{ color:var(--accent-strong); font-weight:600; background:var(--accent-soft); }
-  .dd-item.dd-all{ color:var(--text-muted); border-bottom:1px solid var(--border); }
-  .dd-empty{ padding:10px 12px; font-size:12px; color:var(--text-faint); }
-
-  .legend-item{ display:flex; align-items:center; gap:9px; font-size:12.5px; padding:6px 0; }
-  .legend-dot{ width:11px;height:11px;border-radius:50%; flex-shrink:0; box-shadow:0 0 0 2px rgba(0,0,0,.05); }
-  .legend-count{ margin-left:auto; color:var(--text-muted); font-variant-numeric:tabular-nums; font-size:11.5px; }
-
-  /* ---------- zone (area-division) legend ---------- */
-  #zone-status{ font-size:11.5px; color:var(--text-muted); line-height:1.6; margin-bottom:10px; }
-  #zone-status.warn{ color:var(--danger); }
-  .legend-item.clickable{ cursor:pointer; border-radius:8px; padding:6px 8px; margin:0 -8px; transition:background .12s; }
-  .legend-item.clickable:hover{ background:var(--card-hover); }
-  .legend-item.clickable.zone-selected{ background:var(--accent-soft); }
-  .legend-dot.square{ border-radius:4px; }
-  #clear-zone-btn{
-    display:none; margin-top:10px; font-family:inherit; font-size:11.5px; font-weight:500;
-    color:var(--text-muted); background:var(--card); border:1px solid var(--border);
-    border-radius:9px; padding:8px 10px; cursor:pointer; width:100%; text-align:center;
-    transition:background .15s, color .15s;
-  }
-  #clear-zone-btn:hover{ background:var(--card-hover); color:var(--accent-strong); }
-
-  /* ---------- map ---------- */
-  #map-wrap{ flex:1; position:relative; }
-  #map{ width:100%; height:100%; background:#e9ebf5; }
-
-  #placeholder{
-    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-    flex-direction:column; gap:10px; color:var(--text-muted); background:var(--bg); z-index:5;
-  }
-  #placeholder svg{ width:42px;height:42px;color:var(--border); }
-  #placeholder h2{ font-size:15px; color:var(--text); margin:0; font-weight:600; }
-  #placeholder p{ font-size:12.5px; margin:0; max-width:260px; text-align:center; line-height:1.6; }
-
-  .map-btn{
-    position:absolute; z-index:10;
-    background:var(--panel); border:1px solid var(--border); border-radius:10px;
-    color:var(--text); font-family:inherit; font-size:12px; font-weight:500;
-    padding:9px 13px; cursor:pointer; display:flex; align-items:center; gap:7px;
-    box-shadow:0 4px 14px rgba(30,34,51,.12);
-    transition:background .15s, border-color .15s;
-  }
-  .map-btn:hover{ background:var(--card-hover); border-color:var(--accent); }
-  .map-btn svg{ width:14px;height:14px; }
-  #reset-view-btn{ top:16px; right:16px; }
-
-  /* leaflet overrides for light theme */
-  .leaflet-control-attribution{ background:rgba(255,255,255,.8) !important; color:var(--text-faint) !important; font-size:10px !important; }
-  .leaflet-control-attribution a{ color:var(--text-muted) !important; }
-  .leaflet-control-zoom a{
-    background:var(--panel) !important; color:var(--text) !important; border-color:var(--border) !important;
-  }
-  .leaflet-control-zoom a:hover{ background:var(--card-hover) !important; }
-  .leaflet-top.leaflet-left{ top:16px !important; left:16px !important; }
-
-  .leaflet-popup-content-wrapper{
-    background:var(--panel); color:var(--text); border-radius:12px;
-    box-shadow:0 10px 30px rgba(30,34,51,.18); border:1px solid var(--border);
-  }
-  .leaflet-popup-tip{ background:var(--panel); border:1px solid var(--border); }
-  .leaflet-popup-close-button{ color:var(--text-muted) !important; }
-  .leaflet-popup-content{ font-family:"Prompt",sans-serif; font-size:13px; line-height:1.55; min-width:180px; margin:12px 14px; }
-  .popup-title{ font-weight:600; margin-bottom:3px; color:var(--text); font-size:13.5px; }
-  .popup-cat{
-    display:inline-block; font-size:11px; padding:2px 9px; border-radius:20px;
-    margin-top:4px; color:#fff; font-weight:600;
-  }
-  .popup-field{ font-size:11.5px; color:var(--text-muted); margin-top:4px; }
-  .popup-field strong{ color:var(--text); font-weight:500; }
-
-  @media (max-width:800px){
-    #app{ flex-direction:column; }
-    #sidebar{ width:100% !important; min-width:0 !important; max-height:46vh; border-right:none; border-bottom:1px solid var(--border); }
-    #sidebar.collapsed{ max-height:0; }
-    #sidebar.collapsed #sidebar-scroll{ display:block; }
-    #sidebar-toggle{ display:none; }
-    #sidebar-resize-handle{ display:none; }
-    #map-wrap{ flex:1; min-height:44vh; }
-  }
+/* ---------- Mobile mode ----------
+   .mobile-preview = mobile-optimized layout (applied automatically on real
+   phones, or manually via the toggle button).
+   .mobile-preview-framed = extra phone-bezel "device frame" visuals, only
+   added when previewing mobile mode on a wide (desktop) screen — a real
+   phone screen doesn't need a fake bezel drawn on top of its own screen. */
+body.mobile-preview-framed{
+  background:var(--bg-sunken);
+  padding:28px 12px;
+  display:flex;
+  justify-content:center;
+  min-height:100vh;
+}
+body.mobile-preview-framed #appFrame{
+  width:100%;
+  max-width:412px;
+  background:var(--bg);
+  border-radius:34px;
+  border:1px solid var(--line-strong);
+  box-shadow:0 32px 64px -24px rgba(6,14,12,.45), 0 0 0 6px var(--bg-elev), 0 0 0 8px var(--line-strong);
+  overflow:hidden;
+  position:relative;
+}
+body.mobile-preview-framed #appFrame::before{
+  content:''; position:absolute; top:10px; left:50%; transform:translateX(-50%);
+  width:84px; height:5px; border-radius:100px; background:var(--line-strong); z-index:120;
+}
+body.mobile-preview .wrap{max-width:100%; padding:0 14px;}
+body.mobile-preview header.topbar{position:sticky; top:0; padding-top:6px;}
+body.mobile-preview .hero-grid{grid-template-columns:1fr;}
+body.mobile-preview .kpi-grid{grid-template-columns:1fr 1fr;}
+body.mobile-preview .charts-grid{grid-template-columns:1fr;}
+body.mobile-preview .charts-grid-2{grid-template-columns:1fr;}
+body.mobile-preview #map{height:300px;}
+body.mobile-preview .filter-row{gap:12px;}
+body.mobile-preview .field-group-grow{flex-basis:100%;}
+body.mobile-preview .filter-title-row{align-items:flex-start;}
+body.mobile-preview .map-head{flex-direction:column; align-items:flex-start;}
+body.mobile-preview #mapResetBtn{align-self:flex-end;}
+body.mobile-preview .brand-mark{width:44px; height:44px; border-radius:12px;}
+body.mobile-preview .brand-text h1{font-size:16.5px;}
+body.mobile-preview .brand-text .eyebrow{font-size:9.5px;}
+body.mobile-preview .status-cluster{gap:6px;}
+body.mobile-preview .pulse-chip{padding:5px 8px; font-size:10px;}
+body.mobile-preview #gsheetToggleBtn span:not(.gsheet-live-dot){display:none;}
+body.mobile-preview .gsheet-panel{width:calc(100vw - 60px); max-width:340px; right:-10px;}
+body.mobile-preview .table-scroll{max-height:340px;}
+/* Give charts more vertical breathing room on mobile so bar/tick labels
+   have space and don't crowd or overlap each other. Paired with JS-side
+   label truncation + axis-flip in renderCharts(). */
+body.mobile-preview .chart-card{padding:14px 14px 8px;}
+body.mobile-preview .chart-canvas-wrap{height:300px;}
+body.mobile-preview .chart-canvas-wrap.tall{height:360px;}
+body.mobile-preview .charts-grid-2 .chart-canvas-wrap{height:230px;}
+#mobileToggle.is-on{background:var(--brand); border-color:var(--brand); color:#fff;}
 </style>
 </head>
 <body>
-<div id="app">
-  <div id="sidebar">
-    <button id="sidebar-toggle" title="ย่อ/ขยายแถบด้านข้าง">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-    </button>
-    <div id="sidebar-collapsed-icon">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z"></path><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
+<div id="appFrame">
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <div class="brand-block">
+      <div class="brand-mark">
+        <svg id="b" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 176.26"><defs><style>.d{fill:#0072bc;}.e{fill:#8dc63f;}.f{fill:#00b3f0;}</style></defs><g id="c"><path d="m0,168.2h3.08c.8,0,1.41.26,1.83.77.36.45.54,1.03.54,1.75s-.18,1.29-.54,1.74c-.42.52-1.03.78-1.83.78h-1.58v2.82H0v-7.87Zm1.5,3.71h1.18c.41,0,.72-.07.92-.21.27-.19.4-.51.4-.97s-.13-.78-.4-.97c-.21-.15-.52-.22-.92-.22h-1.18v2.37Z"/><path d="m9.54,168.02c1.04,0,1.86.4,2.48,1.19.59.76.88,1.75.88,2.95s-.29,2.14-.88,2.9c-.62.8-1.45,1.2-2.48,1.2s-1.87-.4-2.49-1.19c-.59-.75-.89-1.72-.89-2.9s.3-2.19.89-2.95c.62-.8,1.44-1.19,2.49-1.19m0,6.78c.63,0,1.11-.27,1.43-.82.28-.47.43-1.08.43-1.82s-.14-1.39-.42-1.86c-.33-.55-.81-.83-1.44-.83s-1.11.28-1.43.83c-.28.48-.43,1.1-.43,1.86s.14,1.35.42,1.81c.33.55.81.82,1.44.82"/><polygon points="14.01 168.2 15.51 168.2 15.51 174.62 18.85 174.62 18.85 176.07 14.01 176.07 14.01 168.2"/><polygon points="19.77 168.2 21.27 168.2 21.27 174.62 24.61 174.62 24.61 176.07 19.77 176.07 19.77 168.2"/><path d="m31.35,173.09c0,1.05-.26,1.85-.78,2.38-.5.52-1.21.78-2.15.78s-1.65-.26-2.14-.77c-.51-.53-.76-1.33-.76-2.39v-4.89h1.5v4.89c0,.52.08.92.24,1.17.22.35.61.53,1.16.53.53,0,.89-.13,1.11-.4.21-.27.32-.7.32-1.31v-4.89h1.5v4.89Z"/><polygon points="34.24 169.66 32.19 169.66 32.19 168.2 37.8 168.2 37.8 169.66 35.74 169.66 35.74 176.07 34.24 176.07 34.24 169.66"/><rect x="38.65" y="168.2" width="1.5" height="7.87"/><path d="m44.63,168.02c1.04,0,1.86.4,2.48,1.19.59.76.88,1.75.88,2.95s-.29,2.14-.88,2.9c-.62.8-1.45,1.2-2.48,1.2s-1.87-.4-2.49-1.19c-.59-.75-.89-1.72-.89-2.9s.3-2.19.89-2.95c.62-.8,1.45-1.19,2.49-1.19m0,6.78c.63,0,1.11-.27,1.43-.82.28-.47.43-1.08.43-1.82s-.14-1.39-.42-1.86c-.33-.55-.81-.83-1.44-.83s-1.11.28-1.43.83c-.28.48-.43,1.1-.43,1.86s.14,1.35.42,1.81c.33.55.81.82,1.44.82"/><polygon points="49.09 168.2 50.58 168.2 53.44 173.48 53.45 168.2 54.88 168.2 54.88 176.07 53.37 176.07 50.51 170.81 50.5 176.07 49.09 176.07 49.09 168.2"/><path d="m65.18,170.85c-.05-.39-.22-.72-.51-.98-.28-.26-.62-.39-.99-.39-.63,0-1.11.28-1.43.83-.28.48-.43,1.1-.43,1.86s.14,1.35.42,1.81c.33.55.81.82,1.44.82.44,0,.8-.16,1.08-.49.26-.3.42-.72.48-1.26h1.46c-.08.98-.39,1.76-.94,2.34-.54.58-1.24.87-2.07.87-1.04,0-1.87-.4-2.49-1.19-.59-.75-.89-1.72-.89-2.9s.3-2.19.89-2.95c.62-.8,1.44-1.19,2.49-1.19.77,0,1.43.24,1.97.73.56.51.89,1.21.99,2.1h-1.46Z"/><path d="m70.86,168.02c1.04,0,1.86.4,2.48,1.19.59.76.88,1.75.88,2.95s-.29,2.14-.88,2.9c-.62.8-1.45,1.2-2.48,1.2s-1.87-.4-2.49-1.19c-.59-.75-.89-1.72-.89-2.9s.3-2.19.89-2.95c.62-.8,1.44-1.19,2.49-1.19m0,6.78c.63,0,1.11-.27,1.43-.82.28-.47.43-1.08.43-1.82s-.14-1.39-.42-1.86c-.33-.55-.81-.83-1.44-.83s-1.11.28-1.43.83c-.28.48-.43,1.1-.43,1.86s.14,1.35.42,1.81c.33.55.81.82,1.44.82"/><polygon points="75.33 168.2 76.81 168.2 79.68 173.48 79.69 168.2 81.12 168.2 81.12 176.07 79.6 176.07 76.75 170.81 76.73 176.07 75.33 176.07 75.33 168.2"/><polygon points="84.04 169.66 81.98 169.66 81.98 168.2 87.6 168.2 87.6 169.66 85.53 169.66 85.53 176.07 84.04 176.07 84.04 169.66"/><path d="m88.44,168.2h3.69c.6,0,1.09.21,1.46.63.37.42.55.94.55,1.55,0,.47-.09.87-.27,1.2-.18.33-.45.59-.82.76.34.11.6.35.77.72.15.32.23.7.23,1.14,0,.4.01.72.04.95.04.42.12.72.24.92h-1.5c-.07-.19-.12-.49-.16-.89-.05-.56-.08-.89-.09-1-.05-.42-.16-.73-.33-.92-.17-.18-.43-.28-.8-.28h-1.51v3.08h-1.5v-7.87Zm1.5,3.57h1.65c.34,0,.6-.09.77-.27.18-.18.26-.47.26-.86s-.09-.66-.26-.84c-.17-.18-.43-.26-.78-.26h-1.65v2.23Z"/><path d="m98.53,168.02c1.04,0,1.86.4,2.48,1.19.59.76.88,1.75.88,2.95s-.29,2.14-.88,2.9c-.62.8-1.45,1.2-2.48,1.2s-1.86-.4-2.49-1.19c-.59-.75-.89-1.72-.89-2.9s.3-2.19.89-2.95c.62-.8,1.44-1.19,2.49-1.19m0,6.78c.63,0,1.11-.27,1.44-.82.28-.47.43-1.08.43-1.82s-.14-1.39-.42-1.86c-.33-.55-.81-.83-1.44-.83s-1.11.28-1.43.83c-.28.48-.43,1.1-.43,1.86s.14,1.35.42,1.81c.33.55.81.82,1.44.82"/><polygon points="102.99 168.2 104.49 168.2 104.49 174.62 107.84 174.62 107.84 176.07 102.99 176.07 102.99 168.2"/><path d="m113.09,168.2h2.95c.92,0,1.66.32,2.22.96.6.69.89,1.67.89,2.94,0,1.19-.26,2.14-.77,2.84-.55.76-1.33,1.13-2.34,1.13h-2.95v-7.87Zm1.5,6.42h1.35c.49,0,.88-.17,1.18-.52.35-.41.53-1.02.53-1.83s-.14-1.48-.43-1.9c-.32-.47-.84-.7-1.56-.7h-1.07v4.96Z"/><polygon points="120.27 168.2 125.39 168.2 125.39 169.66 121.77 169.66 121.77 171.34 125.1 171.34 125.1 172.68 121.77 172.68 121.77 174.62 125.46 174.62 125.46 176.07 120.27 176.07 120.27 168.2"/><path d="m126.57,168.2h3.08c.8,0,1.41.26,1.83.77.36.45.54,1.03.54,1.75s-.18,1.29-.54,1.74c-.42.52-1.03.78-1.83.78h-1.58v2.82h-1.5v-7.87Zm1.5,3.71h1.18c.41,0,.72-.07.92-.21.26-.19.4-.51.4-.97s-.13-.78-.4-.97c-.21-.15-.52-.22-.92-.22h-1.18v2.37Z"/><path d="m134.92,168.2h1.54l2.57,7.87h-1.57l-.52-1.75h-2.56l-.54,1.75h-1.53l2.61-7.87Zm-.15,4.83h1.78l-.86-2.89-.92,2.89Z"/><path d="m139.69,168.2h3.69c.6,0,1.09.21,1.46.63.37.42.55.94.55,1.55,0,.47-.09.87-.27,1.2-.18.33-.45.59-.82.76.34.11.6.35.77.72.15.32.23.7.23,1.14,0,.4.01.72.04.95.04.42.12.72.24.92h-1.5c-.07-.19-.12-.49-.16-.89-.05-.56-.08-.89-.09-1-.05-.42-.16-.73-.33-.92-.17-.18-.43-.28-.8-.28h-1.51v3.08h-1.5v-7.87Zm1.5,3.57h1.66c.34,0,.6-.09.77-.27.18-.18.26-.47.26-.86s-.09-.66-.26-.84c-.17-.18-.43-.26-.78-.26h-1.66v2.23Z"/><polygon points="148.23 169.66 146.18 169.66 146.18 168.2 151.8 168.2 151.8 169.66 149.73 169.66 149.73 176.07 148.23 176.07 148.23 169.66"/><polygon points="152.64 168.2 154.75 168.2 156.36 173.62 157.89 168.2 160.01 168.2 160.01 176.07 158.6 176.07 158.6 170.49 156.9 176.07 155.73 176.07 154.06 170.54 154.04 176.07 152.64 176.07 152.64 168.2"/><polygon points="161.43 168.2 166.55 168.2 166.55 169.66 162.92 169.66 162.92 171.34 166.25 171.34 166.25 172.68 162.92 172.68 162.92 174.62 166.62 174.62 166.62 176.07 161.43 176.07 161.43 168.2"/><polygon points="167.73 168.2 169.21 168.2 172.07 173.48 172.09 168.2 173.52 168.2 173.52 176.07 172 176.07 169.15 170.81 169.13 176.07 167.73 176.07 167.73 168.2"/><polygon points="176.43 169.66 174.38 169.66 174.38 168.2 180 168.2 180 169.66 177.93 169.66 177.93 176.07 176.43 176.07 176.43 169.66"/><path d="m14.42,147.22c-.56,0-1.09.11-1.59.34-.5.22-.88.49-1.13.81h.89v8.59h-2.36v-7.22h-1.05v-2.24c.31-.14.79-.42,1.46-.85.67-.43,1.22-.72,1.65-.89.69-.27,1.4-.4,2.15-.4,1.24,0,2.29.31,3.15.91.95.66,1.42,1.54,1.42,2.65v8.04h-2.35v-7.93c0-.56-.2-1-.59-1.32-.39-.32-.94-.48-1.66-.48"/><path d="m27.22,155.09c.28,0,.5-.11.65-.32.13-.18.19-.4.19-.69v-3.55h-2.48c-.23,0-.45.09-.66.26-.2.17-.3.38-.3.61h-2.69c0-1.92.25-3.34.76-4.27.63-1.16,1.74-1.75,3.32-1.75.36,0,.96.06,1.8.18.45.06.79.1,1.02.1.29,0,.55-.02.78-.06.23-.04.5-.12.79-.25v2.22c-.18.09-.39.16-.62.21-.23.05-.45.07-.66.07-.3,0-.65-.03-1.07-.1-1-.16-1.65-.24-1.95-.24-.47,0-.83.11-1.08.34-.25.23-.38.57-.38,1.05l.2-.17c.21-.12.44-.18.7-.18h4.88v5.58c0,.96-.36,1.7-1.08,2.21-.67.48-1.56.71-2.69.71s-1.97-.21-2.65-.64c-.82-.51-1.23-1.27-1.23-2.28,0-.66.23-1.23.68-1.7.45-.47,1-.71,1.64-.71s1.19.23,1.65.7c.46.47.69,1.04.69,1.71,0,.21-.01.37-.04.48-.03.11-.08.27-.16.47m-2.88-.95c0,.23.07.41.21.56.14.15.32.22.53.22s.4-.08.54-.22c.14-.15.22-.33.22-.56s-.07-.4-.22-.55c-.14-.15-.33-.22-.54-.22s-.38.07-.53.22c-.14.15-.21.33-.21.55"/><path d="m36.53,151.84v-1.29l-.22.04h-.28c-.69.01-1.27-.24-1.75-.73-.48-.5-.72-1.1-.72-1.8s.25-1.33.75-1.85c.5-.52,1.11-.78,1.84-.78.88,0,1.57.28,2.07.84.45.52.67,1.18.67,1.99v4.21l3.38,2.15v-9.11h2.35v11.46h-3.14l-2.83-1.78c-.19.54-.52.98-.98,1.33-.51.39-1.11.59-1.8.59-.72,0-1.33-.26-1.83-.77-.5-.51-.75-1.14-.75-1.89s.25-1.38.74-1.9c.49-.52,1.1-.77,1.83-.77h.36s.28.06.28.06Zm-1.53,2.62c0,.25.09.47.26.64.17.18.38.27.62.27s.46-.08.63-.25c.17-.17.26-.39.26-.66s-.09-.48-.26-.66c-.17-.18-.38-.27-.63-.27s-.45.09-.62.27c-.17.18-.26.4-.26.66m1.83-6.39c0-.23-.08-.43-.23-.59-.15-.16-.34-.24-.57-.24s-.41.08-.57.24c-.16.16-.24.35-.24.59s.08.43.23.59c.15.16.35.24.58.24.22,0,.4-.08.56-.25.16-.16.23-.36.23-.58"/><path d="m52.55,148.26c.59,0,1.08.21,1.49.63.4.42.61.94.61,1.55s-.2,1.11-.61,1.54c-.41.43-.9.64-1.49.64-.23,0-.45-.04-.64-.11l-.68,4.44h-2.73c0-.91-.08-1.8-.24-2.7-.16-.89-.33-1.77-.49-2.62-.16-.85-.24-1.53-.24-2.04,0-1.27.4-2.27,1.22-3.02.88-.81,2.16-1.22,3.83-1.22s2.97.28,3.79.84c.87.6,1.31,1.54,1.31,2.83v7.93h-2.37v-7.76c0-.64-.25-1.13-.75-1.47-.5-.34-1.14-.5-1.93-.5-.97,0-1.7.27-2.17.8-.41.48-.62,1.14-.62,1.99,0,.3.02.6.07.92.05.31.12.65.22,1.03l.22-1.47c.11-.71.36-1.25.76-1.64.4-.38.87-.58,1.43-.58m-.78,2.21c0,.21.08.4.23.56.15.16.34.24.55.24s.39-.08.54-.24c.15-.16.23-.34.23-.56s-.08-.4-.23-.56c-.15-.16-.33-.24-.54-.24s-.39.08-.55.23c-.16.15-.24.34-.24.57"/><path d="m65.03,147.3c-.7,0-1.24.25-1.63.75-.39.5-.59,1.17-.59,2.02h-2.46c0-1.41.39-2.53,1.16-3.36.85-.9,2.05-1.36,3.63-1.36,1.38,0,2.44.32,3.19.96.75.64,1.12,1.58,1.12,2.82v4.95c0,.9-.25,1.62-.74,2.18-.49.56-1.14.83-1.94.83s-1.42-.24-1.93-.73c-.51-.49-.76-1.11-.76-1.87,0-.7.24-1.3.72-1.8.48-.5,1.06-.75,1.74-.75h.34s.22.06.22.06v-2.62c0-.63-.16-1.12-.49-1.48-.36-.4-.89-.6-1.58-.6m1.51,8.01c.22,0,.4-.08.57-.24.16-.16.24-.35.24-.59s-.08-.43-.24-.6c-.16-.16-.35-.24-.58-.24s-.4.08-.56.24c-.16.16-.24.36-.24.6s.08.43.23.59c.15.16.34.24.57.24"/><path d="m75.32,150.56l-.22.04h-.28c-.68.01-1.26-.24-1.74-.73-.48-.5-.72-1.1-.72-1.8s.25-1.33.75-1.85c.5-.52,1.11-.78,1.83-.78.89,0,1.58.28,2.07.84.45.52.68,1.18.68,1.99v6.72h3.86v-9.46h2.35v11.46h-8.56v-6.42Zm.31-2.49c0-.23-.08-.43-.23-.59-.15-.16-.35-.24-.58-.24-.22,0-.4.08-.56.25-.16.16-.24.36-.24.58s.08.43.23.59c.15.16.34.24.57.24s.41-.08.57-.24c.16-.16.24-.36.24-.59"/><path d="m91.81,148.26c.59,0,1.08.21,1.49.63.41.42.61.94.61,1.55s-.2,1.11-.61,1.54c-.4.43-.9.64-1.49.64-.23,0-.45-.04-.64-.11l-.68,4.44h-2.73c0-.91-.08-1.8-.24-2.7-.16-.89-.33-1.77-.49-2.62-.16-.85-.24-1.53-.24-2.04,0-1.27.4-2.27,1.22-3.02.88-.81,2.16-1.22,3.83-1.22s2.97.28,3.79.84c.88.6,1.31,1.54,1.31,2.83v7.93h-2.37v-7.76c0-.64-.25-1.13-.75-1.47-.5-.34-1.14-.5-1.93-.5-.97,0-1.7.27-2.17.8-.41.48-.62,1.14-.62,1.99,0,.3.02.6.07.92.05.31.12.65.22,1.03l.22-1.47c.11-.71.36-1.25.75-1.64.4-.38.88-.58,1.43-.58m-.78,2.21c0,.21.08.4.23.56.15.16.34.24.55.24s.39-.08.54-.24c.15-.16.23-.34.23-.56s-.08-.4-.23-.56c-.15-.16-.33-.24-.54-.24s-.39.08-.55.23c-.16.15-.24.34-.24.57"/><path d="m94.42,162.17c-.42,0-.81-.18-1.16-.53-.35-.36-.53-.8-.53-1.33s.18-.99.55-1.36c.37-.36.83-.54,1.39-.54.66,0,1.2.23,1.62.7.42.47.63,1.05.63,1.73v3.42h-2.5v-2.09Zm-.46-1.83c0,.18.06.35.2.48.13.13.29.2.47.2s.34-.07.47-.2c.13-.14.2-.3.2-.48,0-.2-.06-.36-.2-.5-.13-.13-.29-.2-.47-.2s-.34.07-.47.2c-.13.14-.2.3-.2.5"/><path d="m103,151.84v-1.29l-.22.04h-.28c-.68.01-1.27-.24-1.75-.73-.48-.5-.72-1.1-.72-1.8s.25-1.33.74-1.85c.5-.52,1.11-.78,1.84-.78.88,0,1.57.28,2.07.84.45.52.68,1.18.68,1.99v4.21l3.38,2.15v-9.11h2.35v11.46h-3.14l-2.83-1.78c-.19.54-.51.98-.97,1.33-.51.39-1.11.59-1.8.59-.72,0-1.33-.26-1.83-.77-.5-.51-.74-1.14-.74-1.89s.25-1.38.74-1.9c.49-.52,1.1-.77,1.83-.77h.37s.28.06.28.06Zm-1.53,2.62c0,.25.09.47.26.64.17.18.38.27.62.27s.46-.08.63-.25c.17-.17.26-.39.26-.66s-.09-.48-.26-.66c-.17-.18-.38-.27-.63-.27s-.45.09-.62.27c-.17.18-.26.4-.26.66m1.83-6.39c0-.23-.08-.43-.23-.59-.15-.16-.34-.24-.57-.24s-.4.08-.57.24c-.16.16-.24.35-.24.59s.08.43.23.59c.15.16.35.24.58.24.22,0,.4-.08.56-.25.16-.16.24-.36.24-.58"/><path d="m117.19,151.84v-1.29l-.22.04h-.28c-.68.01-1.27-.24-1.75-.73-.48-.5-.72-1.1-.72-1.8s.25-1.33.74-1.85c.5-.52,1.11-.78,1.84-.78.88,0,1.57.28,2.07.84.45.52.68,1.18.68,1.99v4.21l3.38,2.15v-9.11h2.35v11.46h-3.14l-2.83-1.78c-.19.54-.51.98-.97,1.33-.51.39-1.11.59-1.8.59-.72,0-1.33-.26-1.83-.77-.5-.51-.74-1.14-.74-1.89s.25-1.38.74-1.9c.49-.52,1.1-.77,1.83-.77h.37s.28.06.28.06Zm-1.53,2.62c0,.25.09.47.26.64.17.18.38.27.62.27s.46-.08.64-.25c.17-.17.26-.39.26-.66s-.09-.48-.26-.66c-.17-.18-.38-.27-.64-.27s-.45.09-.62.27c-.17.18-.26.4-.26.66m1.83-6.39c0-.23-.08-.43-.23-.59-.15-.16-.34-.24-.57-.24s-.4.08-.57.24c-.16.16-.24.35-.24.59s.08.43.23.59c.15.16.35.24.58.24.22,0,.4-.08.56-.25.16-.16.24-.36.24-.58"/><path d="m132.03,152c.74,0,1.35.25,1.83.74.48.49.72,1.1.72,1.8s-.24,1.3-.72,1.8c-.48.5-1.06.75-1.74.75-.88,0-1.58-.28-2.09-.86-.51-.57-.76-1.37-.76-2.37,0-1.46.33-2.69,1-3.71.76-1.16,1.79-1.73,3.1-1.73.75,0,1.42.36,2.02,1.09.52.65.88,1.41,1.08,2.31.12-.48.18-.95.18-1.4,0-.95-.28-1.68-.83-2.2-.55-.52-1.32-.77-2.31-.77-.85,0-1.56.16-2.15.5-.59.33-.94.81-1.06,1.45h-2.16c0-1.21.55-2.19,1.64-2.95,1.04-.72,2.29-1.08,3.76-1.08,1.98,0,3.42.48,4.32,1.43.75.79,1.12,1.94,1.12,3.44,0,.69-.04,1.4-.13,2.12-.09.72-.17,1.48-.26,2.27-.09.79-.13,1.57-.13,2.34h-2.83c-.17-1.57-.51-3-1.02-4.3-.5-1.29-1.01-1.94-1.5-1.94-.33,0-.6.15-.79.45-.14.23-.23.52-.27.84m-.73,2.55c0,.23.08.43.23.59.15.16.35.24.58.24s.41-.08.57-.24c.15-.16.23-.36.23-.59s-.08-.43-.23-.59c-.15-.16-.34-.24-.57-.24s-.4.08-.57.24c-.16.16-.24.36-.24.59"/><path d="m147.85,156.98h-3.04v-6.42l-.22.04h-.28c-.68.01-1.26-.24-1.74-.73-.48-.5-.72-1.1-.72-1.8s.25-1.33.75-1.85c.5-.52,1.1-.78,1.83-.78.89,0,1.58.28,2.07.84.45.52.68,1.18.68,1.99v4.13l2.08-6.73,2.24,6.73v-6.87h2.35v11.46h-2.77l-1.77-4.95-1.45,4.95Zm-2.73-8.91c0-.23-.08-.43-.23-.59-.15-.16-.35-.24-.58-.24-.22,0-.4.08-.56.25-.16.16-.24.36-.24.58s.08.43.23.59c.15.16.34.24.57.24s.4-.08.57-.24c.16-.16.24-.36.24-.59"/><path d="m143.64,141.22c.3,0,.74-.15,1.33-.45.95-.48,1.51-.76,1.69-.84.74-.31,1.41-.46,2-.46.7,0,1.49.19,2.37.56.94.42,1.88.83,2.81,1.25v1.94h-10.2v-2Zm5.1-.13c-.35,0-.71.07-1.09.2-.37.14-.71.31-1.02.53h4.33c-.25-.22-.6-.4-1.03-.53-.43-.13-.83-.2-1.19-.2"/><path d="m166,145.52h2.36v3.94c.15-.06.36-.2.62-.39l.32-.27v2.46l-.3.18c-.33.21-.54.34-.65.39v5.13h-9.06v-6.42l-.21.04h-.28c-.69.01-1.27-.24-1.75-.73-.48-.5-.72-1.1-.72-1.8s.25-1.33.74-1.85c.5-.52,1.11-.78,1.84-.78.88,0,1.57.28,2.06.84.45.52.68,1.19.68,1.99v6.72h4.35v-2.35c-.31.09-.66.13-1.03.13-.82,0-1.5-.18-2.03-.56-.64-.45-.96-1.1-.96-1.97,0-.51.18-.96.54-1.33.36-.37.79-.56,1.28-.56s.94.18,1.29.55c.36.37.53.81.53,1.34v.25s-.05.2-.05.2h.23s.13.01.13.01h.06v-5.16Zm-6.4,2.55c0-.23-.08-.43-.23-.59-.15-.16-.34-.24-.57-.24s-.41.08-.57.24c-.16.16-.24.35-.24.59s.08.43.23.59c.15.16.35.24.58.24.21,0,.4-.08.56-.25.16-.16.24-.36.24-.58m3.63,2.12c0,.17.06.31.17.43l.41.17c.17,0,.31-.06.42-.17.11-.11.16-.26.16-.43s-.05-.32-.16-.43c-.11-.11-.25-.17-.42-.17l-.41.17c-.11.12-.17.26-.17.43"/><rect class="f" x="16.71" y="122.81" width="144.33" height="9.71"/><path class="e" d="m143.48,105.95h-52.84v-13c2.48.17,6.55-.06,10.45-2.53,4.27-2.7,7.18-7.3,8.67-13.69h-.06s.22-.65.22-.65c-.26-.1-6.55-2.37-12.95.76-3.31,1.61-5.99,4.33-8.04,8.09-2.08-4.06-4.88-6.98-8.36-8.68-6.41-3.13-12.69-.86-12.95-.76l.28.8-.08.02c1.49,6.38,4.4,10.99,8.67,13.69,3.71,2.35,7.58,2.67,10.09,2.55v13.4H16.71v6.9h144.33v-6.9h-17.56Zm-44.58-24.87c1.76-.86,3.54-1.15,5.07-1.19-3.06,7.09-8.33,8.43-11.67,8.48,1.66-3.49,3.87-5.95,6.6-7.29Zm-25.39-1.85c3.58.05,8.53,1.61,11.83,8.72-3.38-.04-8.76-1.39-11.83-8.72Z"/><path class="f" d="m117.43,69.33c-3.72-8.68-11.61-19.04-28.01-19.86v-.06c-.17,0-.32.02-.48.03-.24,0-.45-.04-.69-.04v.08c-16.41.82-24.3,11.17-28.02,19.86-4,9.34-4.04,18.48-4.04,18.86v17.74h6.03v-17.74c0-1.29.41-31.54,26.75-32.53,26.16,1.19,26.48,31.22,26.48,32.51v17.75h6.03v-17.75c0-.38-.04-9.53-4.04-18.86Z"/><path class="f" d="m41.68,81.28c0-1.83.71-45.04,47.21-45.96,46.51,1.01,47.06,44.11,47.06,45.95v24.68h7.53v-24.68c0-.54-.08-13.37-6.83-26.43-6.28-12.16-19.67-26.74-47.72-27.31h0s-.03,0-.04,0c-.07,0-.13,0-.19,0v.02c-28.05.57-41.43,15.15-47.72,27.31-6.75,13.07-6.83,25.89-6.83,26.43v24.67h7.54v-24.67Z"/><path class="d" d="m159.98,45.43c-5.94-12.87-14.16-23.22-24.41-30.74C123.04,5.48,107.5.56,89.39.04V.01c-.12,0-.24.01-.36.01-.23,0-.45-.02-.68-.02v.05c-18.11.52-33.64,5.44-46.18,14.65-10.25,7.53-18.46,17.87-24.41,30.74-9.99,21.63-10.1,42.77-10.1,43.66v43.46h9.04v-43.46c0-3.19.99-77.97,72.32-79.72,71.18,1.97,72.01,76.52,72.01,79.71v43.46h9.04v-43.46c0-.89-.11-22.04-10.1-43.66Z"/></g></svg>
+      </div>
+      <div class="brand-text">
+        <div class="eyebrow">กทม. + สคพ. · เครือข่ายควบคุมมลพิษ</div>
+        <h1>ระบบเฝ้าระวังแหล่งกำเนิดมลพิษ</h1>
+      </div>
     </div>
-    <div id="sidebar-resize-handle" title="ลากเพื่อปรับความกว้าง"></div>
-    <div id="sidebar-scroll">
-      <div class="brand">
-        <span class="brand-mark">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z"></path><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
-        </span>
-        <h1>แผนที่โครงการ</h1>
-      </div>
-
-      <!-- ============ UPLOAD STAGE ============ -->
-      <div id="upload-stage">
-        <div class="upload-zone" id="drop-zone">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-          <div class="upload-title">คลิกหรือลากไฟล์มาวาง</div>
-          <div class="upload-hint">รองรับ .xlsx, .xls, .csv</div>
-        </div>
-        <input type="file" id="file-input" accept=".xlsx,.xls,.csv" />
-        <div class="status-line" id="status"></div>
-        <div class="file-format-note">
-          ควรมีคอลัมน์ละติจูด/ลองจิจูด เช่น <code>lat</code>, <code>lng</code> หรือ <code>ละติจูด</code>, <code>ลองจิจูด</code> — ระบบจะตรวจจับคอลัมน์เองอัตโนมัติ และสร้างตัวกรองจากทุกคอลัมน์ในไฟล์ให้เอง
-        </div>
-      </div>
-
-      <!-- ============ DASHBOARD STAGE ============ -->
-      <div id="dashboard-stage">
-        <div class="file-row">
-          <span id="file-name-label"></span>
-          <button id="change-file-btn">เปลี่ยนไฟล์</button>
-        </div>
-        <div id="skip-note"></div>
-
-        <div class="section-header h1">
-          <span class="bar"></span><span class="section-label">ภาพรวม</span>
-        </div>
-        <div class="stat-grid">
-          <div class="stat-card">
-            <div class="stat-label">จำนวนทั้งหมด</div>
-            <div class="stat-value" id="stat-total-big">0</div>
+    <div class="status-cluster">
+      <div class="pulse-chip"><span class="pulse-dot"></span><span id="syncLabel">ข้อมูลล่าสุด —</span></div>
+      <div class="pulse-chip" id="clockChip">--:--:--</div>
+      <div class="gsheet-wrap">
+        <button class="btn primary" id="gsheetToggleBtn" type="button" title="เชื่อมต่อ Google Sheet แบบเรียลไทม์">
+          <span class="gsheet-live-dot" id="gsheetLiveDot"></span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg>
+          เชื่อมต่อ Google Sheet
+        </button>
+        <div class="gsheet-panel" id="gsheetPanel" hidden>
+          <label for="gsheetUrlInput">ลิงก์ Google Sheet (แบบเปิดสาธารณะ)</label>
+          <input type="text" id="gsheetUrlInput" placeholder="วางลิงก์ https://docs.google.com/spreadsheets/d/...">
+          <div class="gsheet-hint">
+            <div class="gsheet-step">1) เปิดไฟล์ใน Google Sheets → กด <b>Share</b> → เปลี่ยนสิทธิ์เป็น <b>"Anyone with the link" (Viewer)</b></div>
+            <div class="gsheet-step">2) คัดลอกลิงก์จาก address bar (มีรูปแบบ <code>/d/SHEET_ID/edit#gid=0</code>) มาวางด้านบน</div>
+            <div class="gsheet-step">3) ระบบจะดึงข้อมูลจากชีตนี้โดยตรงและรีเฟรชอัตโนมัติ ไม่ต้องอัปโหลดไฟล์ซ้ำอีก</div>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">แสดงบนแผนที่</div>
-            <div class="stat-value" id="stat-shown-big">0</div>
+          <div class="gsheet-actions">
+            <button class="btn primary" id="gsheetConnectBtn" type="button" style="flex:1; justify-content:center;">เชื่อมต่อ &amp; ดึงข้อมูล</button>
           </div>
-        </div>
-
-        <div class="section-header h2">
-          <span class="bar"></span><span class="section-label">ค้นหาโครงการ</span>
-        </div>
-        <div class="search-wrap">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-          <input id="search-input" placeholder="ค้นหาชื่อโครงการ..." />
-        </div>
-
-        <div class="filters-head section-header h3">
-          <span class="left"><span class="bar"></span><span class="section-label">ตัวกรองข้อมูล</span></span>
-          <button id="clear-filters-btn">ล้างตัวกรอง</button>
-        </div>
-        <div id="filters-grid" class="filters-grid"></div>
-
-        <div class="section" id="legend-section" style="margin-top:20px; padding-top:16px; border-top:1px solid var(--border);">
-          <div class="section-header h4 legend-header">
-            <span class="left"><span class="bar"></span><span class="section-label">คำอธิบายสี</span></span>
-            <select id="legend-col-select" class="legend-col-select"></select>
+          <div class="gsheet-refresh-row" id="gsheetRefreshRow" hidden>
+            <span id="gsheetRefreshLabel">รีเฟรชอัตโนมัติ: ปิด</span>
+            <span style="display:flex; gap:10px;">
+              <button type="button" id="gsheetRefreshToggleBtn">เปิดรีเฟรชอัตโนมัติ</button>
+              <button type="button" id="gsheetRefreshNowBtn">รีเฟรชตอนนี้</button>
+              <button type="button" id="gsheetDisconnectBtn">ยกเลิกการเชื่อมต่อ</button>
+            </span>
           </div>
-          <div id="legend-list"></div>
-        </div>
-
-        <div class="section" id="zone-section" style="margin-top:20px; padding-top:16px; border-top:1px solid var(--border);">
-          <div class="section-header h5 legend-header">
-            <span class="left"><span class="bar"></span><span class="section-label">แบ่งพื้นที่บนแผนที่</span></span>
-            <select id="zone-col-select" class="legend-col-select"></select>
-          </div>
-          <div id="zone-status"></div>
-          <div id="zone-legend-list"></div>
-          <button id="clear-zone-btn">✕ ล้างการเลือกพื้นที่</button>
+          <div class="gsheet-msg" id="gsheetMsg"></div>
+          <details class="gsheet-fallback-details">
+            <summary>หรืออัปโหลดไฟล์ .xlsx/.csv จากเครื่องแทน</summary>
+            <label class="btn" for="fileInput" style="width:100%; justify-content:center;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h8M8 9h2"/></svg>
+              อัปโหลดไฟล์ข้อมูล (.xlsx/.csv)
+            </label>
+            <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" hidden>
+          </details>
         </div>
       </div>
+      <button class="icon-btn" id="mobileToggle" title="ดูตัวอย่างโหมดโทรศัพท์">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2.2"/><path d="M11 18h2"/></svg>
+      </button>
+      <button class="icon-btn" id="themeToggle" title="สลับโหมดมืด/สว่าง">
+        <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
     </div>
   </div>
+</header>
 
-  <div id="map-wrap">
-    <div id="placeholder">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z"></path><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
-      <h2 id="placeholder-title">ยังไม่มีข้อมูลบนแผนที่</h2>
-      <p id="placeholder-text">อัปโหลดไฟล์ Excel ทางด้านซ้ายเพื่อเริ่มปักหมุด</p>
+<div class="filterbar">
+  <div class="wrap filter-shell">
+    <div class="filter-title-row">
+      <div class="filter-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+        ตัวกรองข้อมูล
+      </div>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <span class="result-count">พบ <b id="resultCount">0</b> จาก <span id="totalCount">0</span> แห่ง</span>
+        <button class="filter-collapse-toggle" id="filterCollapseToggle" type="button" title="ย่อ/ขยายแถบตัวกรอง">
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+      </div>
     </div>
-    <button class="map-btn" id="reset-view-btn" style="display:none;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9"></path><path d="M3 3v6h6"></path></svg>
-      รีเซ็ตมุมมอง
-    </button>
-    <div id="map"></div>
+    <div class="filter-body" id="filterBody">
+    <div class="filter-row" id="filterRow">
+      <div class="field-group">
+        <span class="field-label">สถานะการปฏิบัติตามกฎหมาย</span>
+        <div class="chip-toggle" id="fStatus">
+          <button class="active" data-v="">ทั้งหมด</button>
+          <button data-v="ok">ปฏิบัติตามกฎหมาย</button>
+          <button data-v="bad">ไม่ปฏิบัติตามกฎหมาย</button>
+        </div>
+      </div>
+      <div class="field-group field-group-grow">
+        <span class="field-label">ค้นหาชื่อสถานประกอบการ</span>
+        <input class="search-input" id="fSearch" type="text" placeholder="พิมพ์ชื่อโครงการ/สถานประกอบการ...">
+      </div>
+    </div>
+    <div class="filter-actions-row">
+      <button class="filter-adv-toggle" id="advToggle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>
+        ตัวกรองเพิ่มเติม
+        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <button class="reset-link" id="resetFilters">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 1 3 6.7"/><path d="M3 7v6h6"/></svg>
+        ล้างตัวกรองทั้งหมด
+      </button>
+    </div>
+    <div class="filter-adv-panel" id="advPanel" hidden>
+      <div class="field-group">
+        <span class="field-label">จังหวัด</span>
+        <input class="search-input" id="fProvince" type="text" list="fProvinceList" placeholder="พิมพ์ค้นหาจังหวัด..." autocomplete="off">
+        <datalist id="fProvinceList"></datalist>
+      </div>
+      <div class="field-group">
+        <span class="field-label">เขต/อำเภอ</span>
+        <input class="search-input" id="fDistrict" type="text" list="fDistrictList" placeholder="พิมพ์ค้นหาเขต/อำเภอ..." autocomplete="off">
+        <datalist id="fDistrictList"></datalist>
+      </div>
+      <div class="field-group">
+        <span class="field-label">ประเภทแหล่งกำเนิด</span>
+        <input class="search-input" id="fType" type="text" list="fTypeList" placeholder="พิมพ์ค้นหาประเภท..." autocomplete="off">
+        <datalist id="fTypeList"></datalist>
+      </div>
+      <div class="field-group">
+        <span class="field-label">ขนาด</span>
+        <input class="search-input" id="fSize" type="text" list="fSizeList" placeholder="พิมพ์ค้นหาขนาด..." autocomplete="off">
+        <datalist id="fSizeList"></datalist>
+      </div>
+      <div class="field-group">
+        <span class="field-label">ท่อเชื่อมต่อระบบบำบัดรวม</span>
+        <div class="chip-toggle" id="fSewer">
+          <button class="active" data-v="">ทั้งหมด</button>
+          <button data-v="yes">เชื่อมต่อ</button>
+          <button data-v="no">ไม่เชื่อมต่อ</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <span class="field-label">ช่วงปีงบประมาณ</span>
+        <div class="year-range">
+          <span id="yMinLbl">2559</span>
+          <input type="range" id="yMin" min="2559" max="2569" value="2559" step="1">
+          <input type="range" id="yMax" min="2559" max="2569" value="2569" step="1">
+          <span id="yMaxLbl">2569</span>
+        </div>
+      </div>
+    </div>
+    </div>
   </div>
 </div>
 
+<main class="wrap">
+
+  <section id="sec-overview">
+    <div class="section-title"><span class="num">01</span> ภาพรวมการปฏิบัติตามกฎหมาย</div>
+    <div class="hero-grid">
+      <div class="gauge-card">
+        <div class="gauge-wrap">
+          <svg id="gaugeSvg" viewBox="0 0 220 130" width="220" height="130"></svg>
+          <div class="gauge-value">
+            <div class="num" id="gaugeNum">0%</div>
+            <div class="lbl">อัตราปฏิบัติตามกฎหมาย</div>
+          </div>
+        </div>
+        <div class="gauge-legend">
+          <div class="item"><span class="dot" style="background:var(--brand)"></span>ปฏิบัติตาม</div>
+          <div class="item"><span class="dot" style="background:var(--warn)"></span>ไม่ปฏิบัติตาม</div>
+        </div>
+      </div>
+      <div class="kpi-grid" id="kpiGrid"></div>
+    </div>
+  </section>
+
+  <section id="sec-charts">
+    <div class="section-title"><span class="num">02</span> วิเคราะห์เชิงลึกทั้งชุดข้อมูล</div>
+    <div class="chart-tabs" id="chartTabs">
+      <button class="active" data-pane="paneOverview">ภาพรวม</button>
+      <button data-pane="paneTrend">แนวโน้ม &amp; พื้นที่เฝ้าระวัง</button>
+      <button data-pane="paneDetail">รายละเอียดเพิ่มเติม</button>
+    </div>
+
+    <div class="chart-pane active" id="paneOverview">
+      <div class="charts-grid">
+        <div class="chart-card">
+          <h3>10 อันดับประเภทแหล่งกำเนิดมลพิษที่พบมากที่สุด</h3>
+          <p class="hint">แยกสัดส่วนปฏิบัติตาม / ไม่ปฏิบัติตามกฎหมายในแต่ละประเภท</p>
+          <div class="chart-canvas-wrap tall"><canvas id="chartType"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>สัดส่วนสถานะภาพรวม</h3>
+          <p class="hint">จากทั้งหมดที่ตรงตัวกรองปัจจุบัน</p>
+          <div class="chart-canvas-wrap tall"><canvas id="chartStatus"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-pane" id="paneTrend">
+      <div class="charts-grid">
+        <div class="chart-card">
+          <h3>แนวโน้มการตรวจสอบรายปีงบประมาณ</h3>
+          <p class="hint">จำนวนแหล่งกำเนิดที่ตรวจ และอัตราปฏิบัติตามกฎหมายในแต่ละปี</p>
+          <div class="chart-canvas-wrap"><canvas id="chartYear"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>10 อันดับเขต/อำเภอที่ไม่ปฏิบัติตามกฎหมายมากที่สุด</h3>
+          <p class="hint">พื้นที่ที่ควรเฝ้าระวังเป็นพิเศษ</p>
+          <div class="chart-canvas-wrap"><canvas id="chartDistrict"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-pane" id="paneDetail">
+      <div class="charts-grid-2">
+        <div class="chart-card">
+          <h3>ขนาดแหล่งกำเนิด</h3>
+          <p class="hint">จำแนกตามขนาด ก/ข/ค/ง</p>
+          <div class="chart-canvas-wrap"><canvas id="chartSize"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>การเชื่อมต่อท่อบำบัดน้ำเสียรวม</h3>
+          <p class="hint">สัดส่วนที่เชื่อมต่อระบบบำบัดส่วนกลาง</p>
+          <div class="chart-canvas-wrap"><canvas id="chartSewer"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>5 จังหวัดที่มีแหล่งกำเนิดมากที่สุด</h3>
+          <p class="hint">นอกเหนือจากกรุงเทพมหานคร</p>
+          <div class="chart-canvas-wrap"><canvas id="chartProvince"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="sec-map">
+    <div class="section-title"><span class="num">03</span> แผนที่แหล่งกำเนิดมลพิษ</div>
+    <div class="map-fullscreen-backdrop" id="mapFullscreenBackdrop"></div>
+    <div class="map-card" id="mapCard">
+      <div class="map-head">
+        <p class="hint" style="margin:0; font-size:12px; color:var(--ink-faint);">จุดสีเขียว = ปฏิบัติตามกฎหมาย · จุดสีส้ม = ไม่ปฏิบัติตามกฎหมาย (คลิกที่จุดเพื่อดูรายละเอียด · เลื่อนล้อเมาส์เพื่อซูมเข้า/ออก)</p>
+        <button class="btn" id="mapResetBtn" type="button" title="รีเซ็ตมุมมองแผนที่กลับตำแหน่งเริ่มต้น">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 1 3 6.7"/><path d="M3 7v6h6"/></svg>
+          รีเซ็ตมุมมอง
+        </button>
+        <button class="btn" id="mapExpandBtn" type="button" title="ขยายแผนที่เต็มจอ">
+          <svg id="mapExpandIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+          ขยายแผนที่
+        </button>
+      </div>
+      <div id="map"></div>
+      <div class="map-legend">
+        <div class="item"><span class="dot" style="background:#2E8B57"></span>ปฏิบัติตามกฎหมาย</div>
+        <div class="item"><span class="dot" style="background:#C1440E"></span>ไม่ปฏิบัติตามกฎหมาย</div>
+        <div class="item">แสดง <span id="mapCount">0</span> จุดที่มีพิกัด</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="sec-table">
+    <div class="section-title"><span class="num">04</span> ตารางข้อมูลรายละเอียด</div>
+    <div class="table-card">
+      <div class="table-head">
+        <span style="font-size:12px; color:var(--ink-faint);">คลิกหัวตารางเพื่อเรียงลำดับ</span>
+        <button class="btn" id="exportBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+          ส่งออก CSV
+        </button>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr id="tableHead"></tr></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+      <div class="pager">
+        <button id="prevPage">‹ ก่อนหน้า</button>
+        <span id="pageLabel">หน้า 1</span>
+        <button id="nextPage">ถัดไป ›</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap foot-grid">
+    <div>
+      <strong>แหล่งข้อมูล:</strong> ไฟล์ข้อมูลแหล่งกำเนิดมลพิษ กทม. + สคพ. (การเชื่อมต่อระบบบำบัดน้ำเสียรวม) —
+      บันทึกล่าสุดจากไฟล์ต้นทาง <span id="footSaved">7 ก.ค. 2569</span>.
+      แดชบอร์ดนี้ประมวลผลทั้งหมดในเบราว์เซอร์ของคุณ ไม่มีการส่งข้อมูลออกนอกเครื่อง (ยกเว้นการเรียกสรุปด้วย AI)
+    </div>
+    <div style="text-align:right;">
+      หมายเหตุ: ข้อมูลในแดชบอร์ดนี้เชื่อมต่อกับชีทข้อมูลต้นทางโดยตรง
+    </div>
+  </div>
+</footer>
+
+<div class="chart-detail-overlay" id="chartDetailOverlay" hidden>
+  <div class="chart-detail-modal">
+    <div class="chart-detail-head">
+      <div>
+        <div class="chart-detail-title" id="chartDetailTitle">รายละเอียด</div>
+        <div class="chart-detail-sub" id="chartDetailSub"></div>
+      </div>
+      <button class="icon-btn" id="chartDetailClose" type="button" title="ปิด" aria-label="ปิด">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="chart-detail-list" id="chartDetailList"></div>
+  </div>
+</div>
+
+</div><!-- /#appFrame -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-const COLOR_PALETTE = ["#3f9c79","#e0703f","#1f6f8b","#c99a1f","#d1478f","#4f74d1","#a3a11f","#d1475f","#1fb3a3","#7a8f2e"];
-const MAX_FILTER_UNIQUE = 4000;
-
-let map = L.map('map', { zoomControl: true, attributionControl: true }).setView([13.7563, 100.5018], 6);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-  maxZoom: 19,
-  subdomains: 'abcd',
-  attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
-}).addTo(map);
-
-function refreshMapSize(){ map.invalidateSize(); }
-window.addEventListener('load', refreshMapSize);
-window.addEventListener('resize', refreshMapSize);
-setTimeout(refreshMapSize, 250);
-if (window.ResizeObserver){ new ResizeObserver(refreshMapSize).observe(document.getElementById('map-wrap')); }
-
-// Area-division polygon layer (Thai province boundaries) — added to the map
-// *before* the markers layer below, so markers always render on top of it.
-let provinceLayer = L.layerGroup().addTo(map);
-
-// No clustering: every point is drawn individually and stays spread out
-// at every zoom level, rather than merging into a single combined dot.
-let markersLayer = L.layerGroup().addTo(map);
-
-let currentRows = [];
-let currentHeaders = [];
-let categoryColorMap = {};
-let activeFilters = {};
-let searchTerm = '';
-let lastBounds = [];
-
-// resolved automatically from the file, no manual column picker exposed to the user
-let latCol = null, lngCol = null, nameCol = null, catCol = null;
-
-// ---------- area division (province boundaries colored by a chosen column) ----------
-let provinceGeoJSON = null;      // raw GeoJSON, loaded once from a public source
-let provinceFeaturesList = [];   // [{feature, bbox, name, voteCounts, assignedValue, color}]
-let zoneCol = null;              // currently chosen column used to color/group provinces
-let zoneColorMap = {};           // column-value -> color
-let rowProvinceIndex = [];       // parallel to currentRows: which provinceFeaturesList index each row physically falls in (-1 = none)
-let selectedProvinceKeys = new Set(); // provinceFeaturesList indices currently selected/filtered to
-
-const el = id => document.getElementById(id);
-const statusEl = el('status');
-const dropZone = el('drop-zone');
-const fileInput = el('file-input');
-const placeholder = el('placeholder');
-const resetViewBtn = el('reset-view-btn');
-
-const sidebarEl = el('sidebar');
-const sidebarToggle = el('sidebar-toggle');
-sidebarToggle.addEventListener('click', () => {
-  const isCollapsing = !sidebarEl.classList.contains('collapsed');
-  if (isCollapsing){
-    // remember any custom (dragged) width, then clear inline styles so
-    // the .collapsed CSS rule (60px) can actually take effect
-    if (sidebarEl.style.width) sidebarEl.dataset.customWidth = sidebarEl.style.width;
-    sidebarEl.style.width = '';
-    sidebarEl.style.minWidth = '';
-  } else if (sidebarEl.dataset.customWidth){
-    // restore the custom width the user had dragged to
-    sidebarEl.style.width = sidebarEl.dataset.customWidth;
-    sidebarEl.style.minWidth = sidebarEl.dataset.customWidth;
-  }
-  sidebarEl.classList.toggle('collapsed');
-});
-sidebarEl.addEventListener('transitionend', (e) => {
-  if (e.propertyName === 'width') refreshMapSize();
-});
-
-// ---- drag-to-resize sidebar width ----
-const SIDEBAR_MIN_WIDTH = 260;
-const SIDEBAR_MAX_WIDTH = 640;
-const resizeHandle = el('sidebar-resize-handle');
-let resizeStartX = 0, resizeStartWidth = 0;
-
-function onResizeMove(e){
-  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-  let newWidth = resizeStartWidth + (clientX - resizeStartX);
-  newWidth = Math.max(SIDEBAR_MIN_WIDTH, Math.min(SIDEBAR_MAX_WIDTH, newWidth));
-  sidebarEl.style.width = newWidth + 'px';
-  sidebarEl.style.minWidth = newWidth + 'px';
-}
-function stopResize(){
-  sidebarEl.classList.remove('resizing');
-  document.body.classList.remove('sidebar-resizing');
-  document.removeEventListener('mousemove', onResizeMove);
-  document.removeEventListener('mouseup', stopResize);
-  document.removeEventListener('touchmove', onResizeMove);
-  document.removeEventListener('touchend', stopResize);
-  refreshMapSize();
-}
-function startResize(e){
-  if (sidebarEl.classList.contains('collapsed')) return;
-  resizeStartX = e.touches ? e.touches[0].clientX : e.clientX;
-  resizeStartWidth = sidebarEl.getBoundingClientRect().width;
-  sidebarEl.classList.add('resizing');
-  document.body.classList.add('sidebar-resizing');
-  document.addEventListener('mousemove', onResizeMove);
-  document.addEventListener('mouseup', stopResize);
-  document.addEventListener('touchmove', onResizeMove, { passive:false });
-  document.addEventListener('touchend', stopResize);
-  e.preventDefault();
-}
-resizeHandle.addEventListener('mousedown', startResize);
-resizeHandle.addEventListener('touchstart', startResize, { passive:false });
-resizeHandle.addEventListener('dblclick', () => {
-  sidebarEl.style.width = '';
-  sidebarEl.style.minWidth = '';
-  delete sidebarEl.dataset.customWidth;
-  refreshMapSize();
-});
-
-dropZone.addEventListener('click', () => fileInput.click());
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
-dropZone.addEventListener('drop', e => {
-  e.preventDefault();
-  dropZone.classList.remove('drag');
-  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
-});
-fileInput.addEventListener('change', e => { if (e.target.files.length) handleFile(e.target.files[0]); });
-el('change-file-btn').addEventListener('click', () => fileInput.click());
-resetViewBtn.addEventListener('click', () => { if (lastBounds.length) map.fitBounds(lastBounds, { padding: [40,40], maxZoom: 15 }); });
-el('search-input').addEventListener('input', e => { searchTerm = e.target.value.trim().toLowerCase(); rebuildMarkers(); });
-el('clear-filters-btn').addEventListener('click', () => {
-  activeFilters = {};
-  document.querySelectorAll('#filters-grid .dd').forEach(dd => {
-    dd.classList.remove('active-filter');
-    const input = dd.querySelector('.dd-input');
-    if (input) input.value = '';
-  });
-  el('search-input').value = '';
-  searchTerm = '';
-  rebuildMarkers();
-});
-
-function setStatus(msg, type){
-  statusEl.textContent = msg;
-  statusEl.className = 'status-line ' + (type || 'ok');
-}
-
-function guessColumn(headers, patterns){
-  const lower = headers.map(h => String(h).toLowerCase().trim());
-  for (const p of patterns){ const idx = lower.findIndex(h => h === p); if (idx !== -1) return headers[idx]; }
-  for (const p of patterns){ const idx = lower.findIndex(h => h.includes(p)); if (idx !== -1) return headers[idx]; }
-  return null;
-}
-
-function parseCoord(val){
-  if (val === "" || val === null || val === undefined) return null;
-  if (typeof val === 'number') return isFinite(val) ? val : null;
-  let s = String(val).trim();
-  const thaiDigits = '๐๑๒๓๔๕๖๗๘๙';
-  s = s.replace(/[๐-๙]/g, d => thaiDigits.indexOf(d));
-  s = s.replace(/[°NSEWnsew]/g, '').trim();
-  s = s.replace(/,/g, '');
-  s = s.replace(/[^\d.\-]/g, '');
-  if (s === '' || s === '-' || s === '.') return null;
-  const n = parseFloat(s);
-  return isNaN(n) ? null : n;
-}
-
-// Fallback for when column names don't match common lat/lng patterns:
-// scan sample values and infer which columns behave like coordinates.
-function detectNumericRangeColumns(headers, rows){
-  const sample = rows.slice(0, Math.min(30, rows.length));
-  const stats = {};
-  headers.forEach(h => {
-    let count = 0, latOk = 0, lngOk = 0;
-    sample.forEach(r => {
-      const v = parseCoord(r[h]);
-      if (v === null) return;
-      count++;
-      if (v >= -90 && v <= 90) latOk++;
-      if (v >= -180 && v <= 180) lngOk++;
-    });
-    stats[h] = { count, latOk, lngOk };
-  });
-  const latCandidates = headers.filter(h => stats[h].count > 0 && stats[h].latOk / stats[h].count >= 0.8);
-  const lngCandidates = headers.filter(h => stats[h].count > 0 && stats[h].lngOk / stats[h].count >= 0.8);
-  const lngPure = lngCandidates.filter(h => !latCandidates.includes(h));
-  const foundLat = latCandidates[0] || null;
-  const foundLng = lngPure[0] || lngCandidates.find(h => h !== foundLat) || null;
-  return { latCol: foundLat, lngCol: foundLng };
-}
-
-function resolveColumns(){
-  latCol = guessColumn(currentHeaders, ['lat','latitude','ละติจูด','แลต']);
-  lngCol = guessColumn(currentHeaders, ['lng','lon','long','longitude','ลองจิจูด','ลอง']);
-  if (!latCol || !lngCol){
-    const auto = detectNumericRangeColumns(currentHeaders, currentRows);
-    if (!latCol) latCol = auto.latCol;
-    if (!lngCol) lngCol = auto.lngCol;
-  }
-  nameCol = guessColumn(currentHeaders, ['ชื่อโครงการ','ชื่อโครงการ (project name)','project name','name','ชื่อ','โครงการ','สถานที่','title','label']);
-  catCol = guessColumn(currentHeaders, ['category','หมวดหมู่','สถานะ','status','type','ประเภท']);
-  zoneCol = guessColumn(currentHeaders, ['จังหวัด','ภาค','เขต','โซน','พื้นที่','zone','region','area','province']);
-}
-
+const EMBEDDED_DATA = {"cols":["n","t","c","a","o","s","d","p","w","y","j","r"],"rows":[]};
+</script>
+<script>
 /* =========================================================
-   Area division: color Thai provinces on the map according
-   to whichever column the user picks, then let the user click
-   a colored area to filter/highlight the matching pins —
-   mirrors the equipment_map.html behavior but works on any
-   column instead of a fixed สคพ. lookup.
+   ระบบเฝ้าระวังแหล่งกำเนิดมลพิษ — dashboard logic
    ========================================================= */
-const PROVINCE_GEO_URLS = [
-  "https://raw.githubusercontent.com/apisit/thailand.json/master/thailandWithName.json",
-  "https://cdn.jsdelivr.net/gh/apisit/thailand.json@master/thailandWithName.json",
-  "https://github.com/apisit/thailand.json/raw/refs/heads/master/thailandWithName.json"
-];
+(function(){
 
-function withTimeout(promise, ms){
-  return Promise.race([promise, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
+const COL = { n:0, t:1, c:2, a:3, o:4, s:5, d:6, p:7, w:8, y:9, j:10, r:11 };
+const STATUS_LABEL = { true: 'ปฏิบัติตามกฎหมาย', false: 'ไม่ปฏิบัติตามกฎหมาย' };
+
+let ALL = [];        // array of row objects {n,t,c,a,o,s,d,p,w,y,j,r}
+let FILTERED = [];
+let charts = {};
+let markerLayer = null;
+let mapInstance = null;
+let sortState = { key: 'n', dir: 1 };
+let currentPage = 1;
+const PAGE_SIZE = 25;
+let lastUpdatedLabel = '';
+
+/* ---------------- Library resilience helpers ----------------
+   Chart.js / Leaflet / XLSX are loaded from a CDN via <script> tags.
+   If the CDN is blocked or slow (offline preview, restrictive network,
+   file:// usage, etc.) those globals may be missing. Previously this
+   caused an uncaught "Chart is not defined" ReferenceError that aborted
+   renderAll() partway through (charts/map/table never drew) and, when
+   triggered from the Google Drive/Sheet import flow, surfaced as a raw
+   "Chart is not defined" message in the connect panel. These helpers
+   detect the missing library, try a fallback CDN once, and otherwise
+   fail soft with a visible, human-readable notice instead of throwing. */
+const LIB_FALLBACK_CDNS = {
+  Chart: 'https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js',
+  L: 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js',
+  XLSX: 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
+};
+const libLoadPromises = {};
+function loadFallbackScript(url){
+  if (!libLoadPromises[url]){
+    libLoadPromises[url] = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = url;
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error('โหลดไลบรารีสำรองไม่สำเร็จ: ' + url));
+      document.head.appendChild(s);
+    });
+  }
+  return libLoadPromises[url];
+}
+// Ensures window[globalName] exists, trying a fallback CDN once if missing.
+// Returns true if the library is (now) available, false otherwise.
+async function ensureLib(globalName){
+  if (typeof window[globalName] !== 'undefined') return true;
+  const fallbackUrl = LIB_FALLBACK_CDNS[globalName];
+  if (fallbackUrl){
+    try{ await loadFallbackScript(fallbackUrl); } catch(e){ /* checked below */ }
+  }
+  return typeof window[globalName] !== 'undefined';
+}
+function showLibWarning(containerEl, message){
+  if (!containerEl) return;
+  containerEl.innerHTML = '<div style="padding:12px;font-size:12.5px;color:#c0392b;text-align:center;">' + escapeHtml(message) + '</div>';
 }
 
-async function loadProvinceGeo(){
-  for (const url of PROVINCE_GEO_URLS){
-    try {
-      const res = await withTimeout(fetch(url), 6000);
-      if (!res.ok) continue;
-      const gj = await res.json();
-      if (gj && gj.features && gj.features.length > 10) return gj;
-    } catch (e) { /* try next source */ }
+function rowsToObjects(payload){
+  const cols = payload.cols;
+  return payload.rows.map(r => {
+    const o = {};
+    cols.forEach((c,i) => o[c] = r[i]);
+    return o;
+  });
+}
+
+function loadData(payload, sourceLabel){
+  ALL = rowsToObjects(payload);
+  lastUpdatedLabel = sourceLabel || ('ไฟล์ต้นฉบับ · ' + ALL.length.toLocaleString('th-TH') + ' รายการ');
+  document.getElementById('syncLabel').textContent = 'ข้อมูล: ' + lastUpdatedLabel;
+  buildFilterOptions();
+  applyFilters();
+}
+
+/* ---------------- Theme ---------------- */
+function initTheme(){
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  setTheme(prefersDark);
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    setTheme(!document.documentElement.classList.contains('dark'));
+  });
+}
+function setTheme(dark){
+  document.documentElement.classList.toggle('dark', dark);
+  const icon = document.getElementById('themeIcon');
+  icon.innerHTML = dark
+    ? '<path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/>'
+    : '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>';
+  Object.values(charts).forEach(ch => ch && ch.update());
+  refreshChartThemeColors();
+}
+
+/* ---------------- Mobile preview (phone) mode ---------------- */
+const LS_MOBILE_PREVIEW = 'pollution_dashboard_mobile_preview';
+
+function isPhoneDevice(){
+  const ua = navigator.userAgent || '';
+  const uaMobile = /Android|iPhone|iPod|IEMobile|BlackBerry|Opera Mini/i.test(ua);
+  const coarsePointer = window.matchMedia && window.matchMedia('(pointer:coarse)').matches;
+  const narrowScreen = window.innerWidth <= 700;
+  return uaMobile || (coarsePointer && narrowScreen);
+}
+
+function isMobileLayout(){
+  return document.body.classList.contains('mobile-preview');
+}
+
+function initMobilePreview(){
+  const btn = document.getElementById('mobileToggle');
+  let saved = null;
+  try{ saved = localStorage.getItem(LS_MOBILE_PREVIEW); }catch(e){}
+  // If the user has never chosen explicitly, auto-switch to phone mode
+  // when the site detects it's actually being opened on a phone.
+  const on = saved === null ? isPhoneDevice() : saved === '1';
+  setMobilePreview(on, { persist: saved !== null });
+  btn.addEventListener('click', () => {
+    setMobilePreview(!document.body.classList.contains('mobile-preview'), { persist:true });
+  });
+  let resizeTimer = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(updateFramedState, 200);
+  });
+}
+
+function updateFramedState(){
+  const on = document.body.classList.contains('mobile-preview');
+  const isNarrowViewport = window.innerWidth <= 700;
+  document.body.classList.toggle('mobile-preview-framed', on && !isNarrowViewport);
+}
+
+function setMobilePreview(on, opts){
+  opts = opts || {};
+  document.body.classList.toggle('mobile-preview', on);
+  updateFramedState();
+  const btn = document.getElementById('mobileToggle');
+  if (btn){
+    btn.classList.toggle('is-on', on);
+    btn.title = on ? 'กลับสู่มุมมองปกติ' : 'ดูตัวอย่างโหมดโทรศัพท์';
   }
+  if (opts.persist){
+    try{ localStorage.setItem(LS_MOBILE_PREVIEW, on ? '1' : '0'); }catch(e){}
+  }
+  syncHeaderHeight();
+  // Charts have axis/label settings tuned per layout (see renderCharts) —
+  // re-render so switching modes never leaves overlapping tick labels.
+  if (Object.keys(charts).length) renderChartsSafe();
+  setTimeout(()=>{ if (mapInstance) mapInstance.invalidateSize(); }, 260);
+}
+
+/* ---------------- Clock ---------------- */
+function initClock(){
+  const el = document.getElementById('clockChip');
+  function tick(){
+    const d = new Date();
+    el.textContent = d.toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+  }
+  tick(); setInterval(tick, 1000);
+}
+
+/* ---------------- Filter options ---------------- */
+function uniqueSorted(arr){ return Array.from(new Set(arr)).filter(v => v !== undefined && v !== null && v !== 'nan' && v !== '').sort((a,b)=>String(a).localeCompare(String(b),'th')); }
+
+function buildFilterOptions(){
+  const provinces = uniqueSorted(ALL.map(r=>r.p));
+  const types = uniqueSorted(ALL.map(r=>r.t));
+  const sizes = uniqueSorted(ALL.map(r=>r.s));
+  fillDatalist('fProvinceList', provinces);
+  fillDatalist('fTypeList', types);
+  fillDatalist('fSizeList', sizes);
+  updateDistrictOptions();
+  document.getElementById('totalCount').textContent = ALL.length.toLocaleString('th-TH');
+}
+function fillDatalist(id, values){
+  const dl = document.getElementById(id);
+  if (!dl) return;
+  dl.innerHTML = values.map(v=>`<option value="${escapeHtml(v)}"></option>`).join('');
+}
+function updateDistrictOptions(){
+  const prov = document.getElementById('fProvince').value.trim().toLowerCase();
+  const pool = prov ? ALL.filter(r=>String(r.p||'').toLowerCase().includes(prov)) : ALL;
+  const districts = uniqueSorted(pool.map(r=>r.d));
+  fillDatalist('fDistrictList', districts);
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+/* ---------------- Filtering ---------------- */
+function getFilters(){
+  return {
+    province: document.getElementById('fProvince').value.trim().toLowerCase(),
+    district: document.getElementById('fDistrict').value.trim().toLowerCase(),
+    type: document.getElementById('fType').value.trim().toLowerCase(),
+    size: document.getElementById('fSize').value.trim().toLowerCase(),
+    status: document.querySelector('#fStatus button.active').dataset.v,
+    sewer: document.querySelector('#fSewer button.active').dataset.v,
+    yMin: parseInt(document.getElementById('yMin').value,10),
+    yMax: parseInt(document.getElementById('yMax').value,10),
+    search: document.getElementById('fSearch').value.trim().toLowerCase(),
+  };
+}
+
+function applyFilters(){
+  const f = getFilters();
+  FILTERED = ALL.filter(r => {
+    if (f.province && !String(r.p||'').toLowerCase().includes(f.province)) return false;
+    if (f.district && !String(r.d||'').toLowerCase().includes(f.district)) return false;
+    if (f.type && !String(r.t||'').toLowerCase().includes(f.type)) return false;
+    if (f.size && !String(r.s||'').toLowerCase().includes(f.size)) return false;
+    if (f.status === 'ok' && !r.c) return false;
+    if (f.status === 'bad' && r.c) return false;
+    if (f.sewer === 'yes' && !r.w) return false;
+    if (f.sewer === 'no' && r.w) return false;
+    if (r.y != null && (r.y < f.yMin || r.y > f.yMax)) return false;
+    if (f.search && !String(r.n).toLowerCase().includes(f.search)) return false;
+    return true;
+  });
+  document.getElementById('resultCount').textContent = FILTERED.length.toLocaleString('th-TH');
+  currentPage = 1;
+  renderAll();
+}
+
+function attachFilterEvents(){
+  let advTimer;
+  ['fProvince','fType','fSize','fDistrict'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', ()=>{
+      clearTimeout(advTimer);
+      advTimer = setTimeout(()=>{ if(id==='fProvince') updateDistrictOptions(); applyFilters(); }, 180);
+    });
+  });
+  ['fStatus','fSewer'].forEach(id=>{
+    document.getElementById(id).addEventListener('click', (e)=>{
+      const btn = e.target.closest('button'); if(!btn) return;
+      document.querySelectorAll('#'+id+' button').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      applyFilters();
+    });
+  });
+  let searchTimer;
+  document.getElementById('fSearch').addEventListener('input', ()=>{
+    clearTimeout(searchTimer); searchTimer = setTimeout(applyFilters, 220);
+  });
+  const yMin = document.getElementById('yMin'), yMax = document.getElementById('yMax');
+  function syncYears(){
+    let a = parseInt(yMin.value,10), b = parseInt(yMax.value,10);
+    if (a > b) { [a,b] = [b,a]; }
+    document.getElementById('yMinLbl').textContent = a;
+    document.getElementById('yMaxLbl').textContent = b;
+    applyFilters();
+  }
+  yMin.addEventListener('input', syncYears);
+  yMax.addEventListener('input', syncYears);
+  document.getElementById('resetFilters').addEventListener('click', ()=>{
+    document.getElementById('fProvince').value='';
+    updateDistrictOptions();
+    document.getElementById('fDistrict').value='';
+    document.getElementById('fType').value='';
+    document.getElementById('fSize').value='';
+    document.querySelectorAll('#fStatus button').forEach(b=>b.classList.remove('active'));
+    document.querySelector('#fStatus button[data-v=""]').classList.add('active');
+    document.querySelectorAll('#fSewer button').forEach(b=>b.classList.remove('active'));
+    document.querySelector('#fSewer button[data-v=""]').classList.add('active');
+    yMin.value = 2559; yMax.value = 2569;
+    document.getElementById('yMinLbl').textContent = 2559;
+    document.getElementById('yMaxLbl').textContent = 2569;
+    document.getElementById('fSearch').value = '';
+    applyFilters();
+  });
+}
+
+/* ---------------- Render orchestrator ---------------- */
+async function renderAll(){
+  try{ renderGauge(); } catch(e){ console.error('renderGauge failed', e); }
+  try{ renderKPIs(); } catch(e){ console.error('renderKPIs failed', e); }
+  await renderChartsSafe();
+  await renderMapSafe();
+  try{ renderTable(); } catch(e){ console.error('renderTable failed', e); }
+}
+
+async function renderChartsSafe(){
+  const ok = await ensureLib('Chart');
+  if (!ok){
+    ['chartType','chartStatus','chartYear','chartDistrict','chartSize','chartSewer','chartProvince'].forEach(id => {
+      const el = document.getElementById(id);
+      showLibWarning(el && el.parentElement, 'โหลดไลบรารีกราฟ (Chart.js) ไม่สำเร็จ ตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองรีเฟรชหน้านี้');
+    });
+    return;
+  }
+  try{ renderCharts(); } catch(e){ console.error('renderCharts failed', e); }
+}
+
+async function renderMapSafe(){
+  const ok = await ensureLib('L');
+  if (!ok){
+    const el = document.getElementById('map');
+    showLibWarning(el, 'โหลดไลบรารีแผนที่ (Leaflet) ไม่สำเร็จ ตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองรีเฟรชหน้านี้');
+    return;
+  }
+  try{ renderMap(); } catch(e){ console.error('renderMap failed', e); }
+}
+
+/* ---------------- Gauge ---------------- */
+function renderGauge(){
+  const total = FILTERED.length;
+  const compliant = FILTERED.filter(r=>r.c).length;
+  const pct = total ? Math.round((compliant/total)*1000)/10 : 0;
+  document.getElementById('gaugeNum').textContent = pct + '%';
+
+  const svg = document.getElementById('gaugeSvg');
+  const cx=110, cy=110, r=92, strokeW=16;
+  const startAngle = Math.PI, endAngle = 0; // semicircle top
+  function polar(cx,cy,r,angle){ return [cx + r*Math.cos(angle), cy - r*Math.sin(angle)]; }
+  function arcPath(pFrom, pTo){
+    const a0 = Math.PI - Math.PI*pFrom;
+    const a1 = Math.PI - Math.PI*pTo;
+    const [x0,y0] = polar(cx,cy,r,a0);
+    const [x1,y1] = polar(cx,cy,r,a1);
+    const large = (a0-a1) > Math.PI ? 1:0;
+    return `M ${x0} ${y0} A ${r} ${r} 0 ${large} 1 ${x1} ${y1}`;
+  }
+  const frac = total ? compliant/total : 0;
+  const style = getComputedStyle(document.documentElement);
+  const cLine = style.getPropertyValue('--line-strong').trim();
+  const cBrand = style.getPropertyValue('--brand').trim();
+  const cWarn = style.getPropertyValue('--warn').trim();
+
+  let ticks = '';
+  for(let i=0;i<=10;i++){
+    const a = Math.PI - (Math.PI * i/10);
+    const [x1,y1] = polar(cx,cy,r+11,a);
+    const [x2,y2] = polar(cx,cy,r+3,a);
+    ticks += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${cLine}" stroke-width="1.5"/>`;
+  }
+
+  const needleAngle = Math.PI - Math.PI*frac;
+  const [nx,ny] = polar(cx,cy,r-6,needleAngle);
+
+  svg.innerHTML = `
+    <path d="${arcPath(0,1)}" fill="none" stroke="${cLine}" stroke-width="${strokeW}" stroke-linecap="round" opacity="0.5"/>
+    <path d="${arcPath(0,frac)}" fill="none" stroke="${cBrand}" stroke-width="${strokeW}" stroke-linecap="round"/>
+    ${ticks}
+    <line x1="${cx}" y1="${cy}" x2="${nx}" y2="${ny}" stroke="${frac<0.5?cWarn:cBrand}" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="${cx}" cy="${cy}" r="5" fill="${frac<0.5?cWarn:cBrand}"/>
+  `;
+}
+
+/* ---------------- KPIs ---------------- */
+function iconSvg(path){ return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`; }
+function renderKPIs(){
+  const total = FILTERED.length;
+  const compliant = FILTERED.filter(r=>r.c).length;
+  const nonCompliant = total - compliant;
+  const sewerYes = FILTERED.filter(r=>r.w).length;
+  const districts = new Set(FILTERED.map(r=>r.d+'|'+r.p)).size;
+  const provinces = new Set(FILTERED.map(r=>r.p)).size;
+  const years = FILTERED.map(r=>r.y).filter(v=>v!=null);
+  const latestYear = years.length ? Math.max(...years) : '-';
+
+  const cards = [
+    { label:'แหล่งกำเนิดทั้งหมด', value: total.toLocaleString('th-TH'), sub: 'รายการที่ตรงตัวกรอง', color:'var(--info)', icon: iconSvg('<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 9h6v6H9z"/>') },
+    { label:'ไม่ปฏิบัติตามกฎหมาย', value: nonCompliant.toLocaleString('th-TH'), sub: total? Math.round(nonCompliant/total*1000)/10 + '% ของทั้งหมด' : '-', color:'var(--warn)', icon: iconSvg('<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>') },
+    { label:'เชื่อมต่อท่อบำบัดรวม', value: (total? Math.round(sewerYes/total*1000)/10 : 0) + '%', sub: sewerYes.toLocaleString('th-TH') + ' แห่ง', color:'var(--brand)', icon: iconSvg('<path d="M12 2c-3 4-6 7-6 11a6 6 0 0 0 12 0c0-4-3-7-6-11z"/>') },
+    { label:'พื้นที่ครอบคลุม', value: provinces.toLocaleString('th-TH') + ' จ.', sub: districts.toLocaleString('th-TH') + ' เขต/อำเภอ · ปีล่าสุด ' + latestYear, color:'var(--info)', icon: iconSvg('<path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>') },
+  ];
+  document.getElementById('kpiGrid').innerHTML = cards.map(c => `
+    <div class="kpi-card">
+      <div class="kpi-top">
+        <span class="kpi-label">${c.label}</span>
+        <span class="kpi-icon" style="background:${c.color}22; color:${c.color};">${c.icon}</span>
+      </div>
+      <div class="kpi-value">${c.value}</div>
+      <div class="kpi-sub">${c.sub}</div>
+    </div>
+  `).join('');
+}
+
+/* ---------------- Charts ---------------- */
+function themeColors(){
+  const style = getComputedStyle(document.documentElement);
+  return {
+    ink: style.getPropertyValue('--ink').trim(),
+    inkSoft: style.getPropertyValue('--ink-soft').trim(),
+    line: style.getPropertyValue('--line').trim(),
+    brand: style.getPropertyValue('--brand').trim(),
+    warn: style.getPropertyValue('--warn').trim(),
+    info: style.getPropertyValue('--info').trim(),
+    amber: style.getPropertyValue('--amber').trim(),
+    bgElev: style.getPropertyValue('--bg-elev').trim(),
+  };
+}
+
+// Conservative fallback: how many characters "should" fit at this pixel
+// budget, assuming a normal Thai sans-serif. Used as a floor so that if the
+// canvas font hasn't actually loaded yet (measureText then reports glyph
+// widths from whatever substitute font the browser is using, which can be
+// far wider than the real typeface) we never truncate down to something
+// unreadably short like 1-2 characters.
+function _minCharsForWidth(maxPx, fontSizePx){
+  return Math.max(3, Math.floor(maxPx / (fontSizePx * 0.62)));
+}
+
+function fitTextToWidth(text, maxPx, fontSizePx){
+  text = String(text == null ? '' : text).trim();
+  if (!text) return text;
+  const floorChars = Math.min(text.length, _minCharsForWidth(maxPx, fontSizePx));
+  try{
+    if (!fitTextToWidth._ctx){
+      fitTextToWidth._ctx = document.createElement('canvas').getContext('2d');
+    }
+    const ctx = fitTextToWidth._ctx;
+    ctx.font = fontSizePx + "px 'IBM Plex Sans Thai','Noto Sans Thai',sans-serif";
+    if (ctx.measureText(text).width <= maxPx) return text;
+    let lo = 0, hi = text.length;
+    while (lo < hi){
+      const mid = Math.ceil((lo + hi) / 2);
+      if (ctx.measureText(text.slice(0, mid) + '…').width <= maxPx) lo = mid; else hi = mid - 1;
+    }
+    if (lo < floorChars) lo = floorChars; // guard against a mis-loaded font over-estimating width
+    return lo > 0 ? text.slice(0, lo) + '…' : '…';
+  } catch(e){
+    const max = Math.max(floorChars, 3);
+    return text.length > max ? text.slice(0, max - 1) + '…' : text;
+  }
+}
+
+// Same idea as fitTextToWidth but wraps onto up to `maxLines` lines instead
+// of cutting straight to an ellipsis after the first line. Returning an
+// array from a Chart.js tick callback renders as a multi-line label, so
+// long Thai category names (which don't have spaces to break on) stay
+// legible instead of collapsing to 2-3 characters.
+function fitTextToLines(text, maxPx, fontSizePx, maxLines){
+  maxLines = maxLines || 2;
+  text = String(text == null ? '' : text).trim();
+  if (!text) return [''];
+  let ctx;
+  try{
+    if (!fitTextToWidth._ctx){
+      fitTextToWidth._ctx = document.createElement('canvas').getContext('2d');
+    }
+    ctx = fitTextToWidth._ctx;
+    ctx.font = fontSizePx + "px 'IBM Plex Sans Thai','Noto Sans Thai',sans-serif";
+  } catch(e){ ctx = null; }
+  const floorChars = Math.min(text.length, _minCharsForWidth(maxPx, fontSizePx));
+
+  if (!ctx){
+    const max = Math.max(floorChars, 3) * maxLines;
+    return text.length > max ? [text.slice(0, max - 1) + '…'] : [text];
+  }
+  if (ctx.measureText(text).width <= maxPx) return [text];
+
+  const lines = [];
+  let remaining = text;
+  for (let i = 0; i < maxLines && remaining; i++){
+    const isLast = i === maxLines - 1;
+    if (ctx.measureText(remaining).width <= maxPx){
+      lines.push(remaining);
+      remaining = '';
+      break;
+    }
+    if (!isLast){
+      let lo = 1, hi = remaining.length;
+      while (lo < hi){
+        const mid = Math.ceil((lo + hi) / 2);
+        if (ctx.measureText(remaining.slice(0, mid)).width <= maxPx) lo = mid; else hi = mid - 1;
+      }
+      if (lo < floorChars) lo = Math.min(floorChars, remaining.length);
+      lines.push(remaining.slice(0, lo));
+      remaining = remaining.slice(lo);
+    } else {
+      let lo = 1, hi = remaining.length;
+      while (lo < hi){
+        const mid = Math.ceil((lo + hi) / 2);
+        if (ctx.measureText(remaining.slice(0, mid) + '…').width <= maxPx) lo = mid; else hi = mid - 1;
+      }
+      if (lo < floorChars) lo = Math.min(floorChars, remaining.length);
+      lines.push(lo < remaining.length ? remaining.slice(0, lo) + '…' : remaining.slice(0, lo));
+      remaining = '';
+    }
+  }
+  return lines.length ? lines : [text];
+}
+
+function baseOptions(extra){
+  const c = themeColors();
+  const mobile = isMobileLayout();
+  Chart.defaults.font.family = "'IBM Plex Sans Thai','Noto Sans Thai',sans-serif";
+  Chart.defaults.color = c.inkSoft;
+  return Object.assign({
+    responsive:true, maintainAspectRatio:false,
+    layout:{ padding:{ right: mobile?6:2 } },
+    plugins:{ legend:{ labels:{ color:c.inkSoft, boxWidth: mobile?9:11, font:{size: mobile?10.5:11} } },
+      tooltip:{ backgroundColor:c.bgElev, titleColor:c.ink, bodyColor:c.inkSoft, borderColor:c.line, borderWidth:1, padding:10, titleFont:{family:"'Chakra Petch'"} } },
+  }, extra||{});
+}
+
+function destroyChart(key){ if(charts[key]){ charts[key].destroy(); delete charts[key]; } }
+
+function renderCharts(){
+  const c = themeColors();
+  const mobile = isMobileLayout();
+  // Reserve a fixed, guaranteed-to-fit column for horizontal-bar category
+  // labels (Chart.js otherwise sizes this from the raw label text, which on
+  // a narrow phone screen can leave almost no room and clip the text).
+  const catAxisY = (widthPx) => {
+    const fontSize = mobile ? 9.5 : 11;
+    return {
+      grid:{display:false},
+      afterFit:(scale)=>{ scale.width = widthPx; },
+      ticks:{ autoSkip:false, font:{size:fontSize},
+        callback:function(val){ return fitTextToLines(this.getLabelForValue(val), widthPx - 10, fontSize, 2); } }
+    };
+  };
+  const catAxisX = (perLabelPx) => {
+    const fontSize = mobile ? 9.5 : 11;
+    return { font:{size:fontSize}, callback:function(val){ return fitTextToWidth(this.getLabelForValue(val), perLabelPx, fontSize); } };
+  };
+
+  // --- Type stacked bar (top10 by count) ---
+  const typeMap = {};
+  FILTERED.forEach(r=>{ typeMap[r.t] = typeMap[r.t] || {ok:0,bad:0}; r.c ? typeMap[r.t].ok++ : typeMap[r.t].bad++; });
+  const typeTop = Object.entries(typeMap).map(([k,v])=>[k,v.ok+v.bad,v]).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  destroyChart('type');
+  charts.type = new Chart(document.getElementById('chartType'), {
+    type:'bar',
+    data:{ labels: typeTop.map(t=>t[0]),
+      datasets:[
+        {label:'ปฏิบัติตาม', data: typeTop.map(t=>t[2].ok), backgroundColor:c.brand, borderRadius:4, stack:'s'},
+        {label:'ไม่ปฏิบัติตาม', data: typeTop.map(t=>t[2].bad), backgroundColor:c.warn, borderRadius:4, stack:'s'},
+      ]},
+    options: baseOptions(Object.assign({ indexAxis:'y', scales:{ x:{stacked:true, grid:{color:c.line}}, y:{stacked:true, ...catAxisY(mobile?128:190)} } },
+      chartClickOptions((evt, elements)=>{
+        if (!elements.length) return;
+        const el = elements[0];
+        const typeName = typeTop[el.index][0];
+        const wantOk = el.datasetIndex === 0;
+        const records = FILTERED.filter(r => r.t === typeName && r.c === wantOk);
+        openChartDetail(typeName, (wantOk?'ปฏิบัติตามกฎหมาย':'ไม่ปฏิบัติตามกฎหมาย') + ' · ' + records.length.toLocaleString('th-TH') + ' แห่ง', records);
+      })))
+  });
+
+  // --- Status donut ---
+  const okCount = FILTERED.filter(r=>r.c).length, badCount = FILTERED.length-okCount;
+  destroyChart('status');
+  charts.status = new Chart(document.getElementById('chartStatus'), {
+    type:'doughnut',
+    data:{ labels:['ปฏิบัติตามกฎหมาย','ไม่ปฏิบัติตามกฎหมาย'], datasets:[{ data:[okCount,badCount], backgroundColor:[c.brand,c.warn], borderWidth:0, hoverOffset:6 }]},
+    options: baseOptions(Object.assign({ cutout:'68%', plugins:{ legend:{ position:'bottom', labels:{color:c.inkSoft, boxWidth:11, font:{size:11.5}} } } },
+      chartClickOptions((evt, elements)=>{
+        if (!elements.length) return;
+        const wantOk = elements[0].index === 0;
+        const records = FILTERED.filter(r => r.c === wantOk);
+        openChartDetail(wantOk?'ปฏิบัติตามกฎหมาย':'ไม่ปฏิบัติตามกฎหมาย', records.length.toLocaleString('th-TH')+' แห่งจากตัวกรองปัจจุบัน', records);
+      })))
+  });
+
+  // --- Year trend ---
+  const yearMap = {};
+  FILTERED.forEach(r=>{ if(r.y==null) return; yearMap[r.y] = yearMap[r.y] || {ok:0,bad:0}; r.c?yearMap[r.y].ok++:yearMap[r.y].bad++; });
+  const years = Object.keys(yearMap).map(Number).sort((a,b)=>a-b);
+  destroyChart('year');
+  charts.year = new Chart(document.getElementById('chartYear'), {
+    data:{ labels: years.map(y=>'พ.ศ.'+y),
+      datasets:[
+        {type:'bar', label:'จำนวนที่ตรวจ', data: years.map(y=>yearMap[y].ok+yearMap[y].bad), backgroundColor:c.info+'99', borderRadius:4, yAxisID:'y'},
+        {type:'line', label:'อัตราปฏิบัติตาม (%)', data: years.map(y=>{const t=yearMap[y].ok+yearMap[y].bad; return t? Math.round(yearMap[y].ok/t*1000)/10:0;}), borderColor:c.brand, backgroundColor:c.brand, yAxisID:'y1', tension:.35, pointRadius:3},
+      ]},
+    options: baseOptions(Object.assign({ scales:{
+      x:{ grid:{display:false}, ticks:{font:{size: mobile?9.5:11}} },
+      y:{ position:'left', grid:{color:c.line}, title:{display:true,text: mobile?'จำนวน':'จำนวน (แห่ง)',color:c.inkSoft,font:{size: mobile?9.5:10.5}}, ticks:{font:{size: mobile?9.5:11}} },
+      y1:{ position:'right', grid:{display:false}, min:0, max:100, title:{display:true,text: mobile?'%':'% ปฏิบัติตาม',color:c.inkSoft,font:{size: mobile?9.5:10.5}}, ticks:{font:{size: mobile?9.5:11}} },
+    }},
+    chartClickOptions((evt, elements)=>{
+      if (!elements.length) return;
+      const year = years[elements[0].index];
+      const records = FILTERED.filter(r => r.y === year);
+      openChartDetail('ปีงบประมาณ '+year, records.length.toLocaleString('th-TH')+' แห่ง', records);
+    })))
+  });
+
+  // --- District non-compliance top10 ---
+  const distMap = {};
+  FILTERED.filter(r=>!r.c).forEach(r=>{ const key = r.d+'||'+r.p; distMap[key]=(distMap[key]||0)+1; });
+  const distTop = Object.entries(distMap).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([key,count])=>{
+    const [d,p] = key.split('||'); return {d,p,count};
+  });
+  destroyChart('district');
+  charts.district = new Chart(document.getElementById('chartDistrict'), {
+    type:'bar',
+    data:{ labels: distTop.map(x=>x.d+' ('+x.p+')'), datasets:[{ label:'ไม่ปฏิบัติตามกฎหมาย', data: distTop.map(x=>x.count), backgroundColor:c.warn, borderRadius:4 }]},
+    options: baseOptions(Object.assign({ indexAxis:'y', plugins:{legend:{display:false}}, scales:{ x:{grid:{color:c.line}}, y:catAxisY(mobile?134:210) } },
+      chartClickOptions((evt, elements)=>{
+        if (!elements.length) return;
+        const item = distTop[elements[0].index];
+        const records = FILTERED.filter(r => !r.c && r.d === item.d && r.p === item.p);
+        openChartDetail(item.d+' ('+item.p+')', 'ไม่ปฏิบัติตามกฎหมาย · '+records.length.toLocaleString('th-TH')+' แห่ง', records);
+      })))
+  });
+
+  // --- Size donut ---
+  const sizeMap = {};
+  FILTERED.forEach(r=>{ sizeMap[r.s]=(sizeMap[r.s]||0)+1; });
+  const sizeEntries = Object.entries(sizeMap).sort((a,b)=>b[1]-a[1]);
+  destroyChart('size');
+  charts.size = new Chart(document.getElementById('chartSize'), {
+    type:'doughnut',
+    data:{ labels: sizeEntries.map(s=>s[0]), datasets:[{ data: sizeEntries.map(s=>s[1]), backgroundColor:[c.brand,c.info,c.amber,c.warn,'#8B6FB3','#4B5D58'], borderWidth:0 }]},
+    options: baseOptions(Object.assign({ cutout:'62%', plugins:{ legend:{ position:'bottom', labels:{color:c.inkSoft, boxWidth:10, font:{size:10.5}} } } },
+      chartClickOptions((evt, elements)=>{
+        if (!elements.length) return;
+        const size = sizeEntries[elements[0].index][0];
+        const records = FILTERED.filter(r => r.s === size);
+        openChartDetail('ขนาด: '+size, records.length.toLocaleString('th-TH')+' แห่ง', records);
+      })))
+  });
+
+  // --- Sewer donut ---
+  const sewerYes = FILTERED.filter(r=>r.w).length, sewerNo = FILTERED.length-sewerYes;
+  destroyChart('sewer');
+  charts.sewer = new Chart(document.getElementById('chartSewer'), {
+    type:'doughnut',
+    data:{ labels:['เชื่อมต่อ','ไม่เชื่อมต่อ'], datasets:[{ data:[sewerYes,sewerNo], backgroundColor:[c.info,c.line], borderWidth:0 }]},
+    options: baseOptions(Object.assign({ cutout:'62%', plugins:{ legend:{ position:'bottom', labels:{color:c.inkSoft, boxWidth:10, font:{size:10.5}} } } },
+      chartClickOptions((evt, elements)=>{
+        if (!elements.length) return;
+        const wantYes = elements[0].index === 0;
+        const records = FILTERED.filter(r => r.w === wantYes);
+        openChartDetail(wantYes?'เชื่อมต่อระบบบำบัดรวม':'ไม่เชื่อมต่อระบบบำบัดรวม', records.length.toLocaleString('th-TH')+' แห่ง', records);
+      })))
+  });
+
+  // --- Province top5 (excluding Bangkok) ---
+  const provMap = {};
+  FILTERED.filter(r=>r.p!=='กรุงเทพมหานคร').forEach(r=>{ provMap[r.p]=(provMap[r.p]||0)+1; });
+  const provTop = Object.entries(provMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  destroyChart('province');
+  const provScales = mobile
+    ? { x:{grid:{color:c.line}, ticks:{font:{size:9.5}}}, y:catAxisY(126) }
+    : { x:{grid:{display:false}, ticks:catAxisX(70)}, y:{grid:{color:c.line}} };
+  charts.province = new Chart(document.getElementById('chartProvince'), {
+    type:'bar',
+    data:{ labels: provTop.map(p=>p[0]), datasets:[{ label:'จำนวนแห่ง', data: provTop.map(p=>p[1]), backgroundColor:c.brand, borderRadius:4 }]},
+    options: baseOptions(Object.assign({ indexAxis: mobile?'y':'x', plugins:{legend:{display:false}}, scales:provScales },
+      chartClickOptions((evt, elements)=>{
+        if (!elements.length) return;
+        const prov = provTop[elements[0].index][0];
+        const records = FILTERED.filter(r => r.p === prov);
+        openChartDetail(prov, records.length.toLocaleString('th-TH')+' แห่ง', records);
+      })))
+  });
+}
+function refreshChartThemeColors(){ if(FILTERED.length || ALL.length) renderChartsSafe(); }
+
+/* ---------------- Chart click-to-view detail ---------------- */
+function openChartDetail(title, subtitle, records){
+  const overlay = document.getElementById('chartDetailOverlay');
+  const titleEl = document.getElementById('chartDetailTitle');
+  const subEl = document.getElementById('chartDetailSub');
+  const listEl = document.getElementById('chartDetailList');
+  titleEl.textContent = title;
+  subEl.textContent = subtitle;
+  if (!records.length){
+    listEl.innerHTML = '<div class="chart-detail-empty">ไม่พบข้อมูลที่ตรงกับส่วนนี้ของกราฟ</div>';
+  } else {
+    const LIMIT = 60;
+    const shown = records.slice(0, LIMIT);
+    listEl.innerHTML = shown.map(r => `
+      <div class="chart-detail-row">
+        <div>
+          <div class="name">${escapeHtml(r.n)}</div>
+          <div class="meta">${escapeHtml(r.t)} · ${escapeHtml(r.d)}, ${escapeHtml(r.p)}${r.y!=null ? ' · ปีงบประมาณ '+r.y : ''}</div>
+        </div>
+        <span class="badge ${r.c?'ok':'bad'}">${r.c?'ปฏิบัติตาม':'ไม่ปฏิบัติตาม'}</span>
+      </div>`).join('') +
+      (records.length > LIMIT ? `<div class="chart-detail-more">แสดง ${LIMIT.toLocaleString('th-TH')} จากทั้งหมด ${records.length.toLocaleString('th-TH')} รายการ</div>` : '');
+  }
+  overlay.hidden = false;
+}
+function closeChartDetail(){ document.getElementById('chartDetailOverlay').hidden = true; }
+function initChartDetailModal(){
+  const overlay = document.getElementById('chartDetailOverlay');
+  document.getElementById('chartDetailClose').addEventListener('click', closeChartDetail);
+  overlay.addEventListener('click', (e)=>{ if (e.target === overlay) closeChartDetail(); });
+  document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape' && !overlay.hidden) closeChartDetail(); });
+}
+function chartClickOptions(handler){
+  return { onClick: handler, onHover: (evt, elements) => { evt.native.target.style.cursor = elements.length ? 'pointer' : 'default'; } };
+}
+
+/* ---------------- Map ---------------- */
+const MAP_DEFAULT_CENTER = [13.75, 100.55];
+const MAP_DEFAULT_ZOOM = 6;
+function initMap(){
+  mapInstance = L.map('map', { scrollWheelZoom:true }).setView(MAP_DEFAULT_CENTER, MAP_DEFAULT_ZOOM);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom:18, attribution:'© OpenStreetMap contributors'
+  }).addTo(mapInstance);
+  markerLayer = L.markerClusterGroup({ maxClusterRadius:45, spiderfyOnMaxZoom:true });
+  mapInstance.addLayer(markerLayer);
+  const resetBtn = document.getElementById('mapResetBtn');
+  if (resetBtn) resetBtn.addEventListener('click', ()=>{
+    mapInstance.setView(MAP_DEFAULT_CENTER, MAP_DEFAULT_ZOOM);
+  });
+  initMapFullscreen();
+}
+function initMapFullscreen(){
+  const card = document.getElementById('mapCard');
+  const backdrop = document.getElementById('mapFullscreenBackdrop');
+  const btn = document.getElementById('mapExpandBtn');
+  if (!card || !backdrop || !btn) return;
+  const closeIcon = '<path d="M9 3H5a2 2 0 0 0-2 2v4M15 3h4a2 2 0 0 1 2 2v4M9 21H5a2 2 0 0 1-2-2v-4M15 21h4a2 2 0 0 0 2-2v-4"/>';
+  const openIcon = document.getElementById('mapExpandIcon').innerHTML;
+  function setExpanded(expanded){
+    card.classList.toggle('is-fullscreen', expanded);
+    backdrop.classList.toggle('show', expanded);
+    btn.lastChild.textContent = expanded ? ' ย่อแผนที่' : ' ขยายแผนที่';
+    document.getElementById('mapExpandIcon').innerHTML = expanded ? closeIcon : openIcon;
+    document.body.style.overflow = expanded ? 'hidden' : '';
+    setTimeout(()=>{ if (mapInstance) mapInstance.invalidateSize(); }, 220);
+  }
+  btn.addEventListener('click', ()=> setExpanded(!card.classList.contains('is-fullscreen')));
+  backdrop.addEventListener('click', ()=> setExpanded(false));
+  document.addEventListener('keydown', (e)=>{
+    if (e.key === 'Escape' && card.classList.contains('is-fullscreen')) setExpanded(false);
+  });
+}
+function renderMap(){
+  if (!mapInstance) return;
+  markerLayer.clearLayers();
+  const c = themeColors();
+  let n = 0;
+  FILTERED.forEach(r => {
+    if (r.a == null || r.o == null) return;
+    n++;
+    const color = r.c ? '#2E8B57' : '#C1440E';
+    const marker = L.circleMarker([r.a, r.o], {
+      radius:6, color:'#fff', weight:1, fillColor:color, fillOpacity:0.9
+    });
+    marker.bindPopup(`
+      <div class="map-popup">
+        <div class="p-name">${escapeHtml(r.n)}</div>
+        <div class="p-row">ประเภท: ${escapeHtml(r.t)}</div>
+        <div class="p-row">พื้นที่: ${escapeHtml(r.d)}, ${escapeHtml(r.p)}</div>
+        <div class="p-row">ปีงบประมาณ: ${r.y ?? '-'}</div>
+        <div class="p-row">ท่อบำบัดรวม: ${r.w ? 'เชื่อมต่อ' : 'ไม่เชื่อมต่อ'}</div>
+        <span class="p-badge" style="background:${r.c?'#DCEEE8':'#F7E2D8'}; color:${r.c?'#0A5D4D':'#C1440E'}">${STATUS_LABEL[r.c]}</span>
+      </div>
+    `);
+    markerLayer.addLayer(marker);
+  });
+  document.getElementById('mapCount').textContent = n.toLocaleString('th-TH');
+}
+
+/* ---------------- Table ---------------- */
+const TABLE_COLS = [
+  {key:'n', label:'ชื่อโครงการ'}, {key:'t', label:'ประเภท'}, {key:'c', label:'สถานะ'},
+  {key:'d', label:'เขต/อำเภอ'}, {key:'p', label:'จังหวัด'}, {key:'s', label:'ขนาด'},
+  {key:'w', label:'ท่อบำบัดรวม'}, {key:'y', label:'ปีงบ'},
+];
+function renderTableHead(){
+  document.getElementById('tableHead').innerHTML = TABLE_COLS.map(col =>
+    `<th data-key="${col.key}">${col.label} ${sortState.key===col.key ? (sortState.dir>0?'▲':'▼') : ''}</th>`
+  ).join('');
+}
+function renderTable(){
+  renderTableHead();
+  const sorted = [...FILTERED].sort((a,b)=>{
+    let va=a[sortState.key], vb=b[sortState.key];
+    if (typeof va === 'boolean') { va = va?1:0; vb = vb?1:0; }
+    if (va == null) va = '';
+    if (vb == null) vb = '';
+    if (va < vb) return -1*sortState.dir;
+    if (va > vb) return 1*sortState.dir;
+    return 0;
+  });
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  currentPage = Math.min(currentPage, totalPages);
+  const start = (currentPage-1)*PAGE_SIZE;
+  const pageRows = sorted.slice(start, start+PAGE_SIZE);
+
+  if (!pageRows.length) {
+    document.getElementById('tableBody').innerHTML = `<tr><td colspan="8"><div class="empty-state">ไม่พบข้อมูลที่ตรงกับตัวกรอง</div></td></tr>`;
+  } else {
+    document.getElementById('tableBody').innerHTML = pageRows.map(r => `
+      <tr>
+        <td>${escapeHtml(r.n)}</td>
+        <td>${escapeHtml(r.t)}</td>
+        <td><span class="badge ${r.c?'ok':'bad'}">${r.c?'ปฏิบัติตาม':'ไม่ปฏิบัติตาม'}</span></td>
+        <td>${escapeHtml(r.d)}</td>
+        <td>${escapeHtml(r.p)}</td>
+        <td>${escapeHtml(r.s)}</td>
+        <td>${r.w?'เชื่อมต่อ':'ไม่เชื่อมต่อ'}</td>
+        <td>${r.y ?? '-'}</td>
+      </tr>
+    `).join('');
+  }
+  document.getElementById('pageLabel').textContent = `หน้า ${currentPage} / ${totalPages}`;
+  document.getElementById('prevPage').disabled = currentPage<=1;
+  document.getElementById('nextPage').disabled = currentPage>=totalPages;
+}
+function attachTableEvents(){
+  document.getElementById('tableHead').addEventListener('click', (e)=>{
+    const th = e.target.closest('th'); if(!th) return;
+    const key = th.dataset.key;
+    if (sortState.key === key) sortState.dir *= -1; else { sortState.key = key; sortState.dir = 1; }
+    renderTable();
+  });
+  document.getElementById('prevPage').addEventListener('click', ()=>{ currentPage--; renderTable(); });
+  document.getElementById('nextPage').addEventListener('click', ()=>{ currentPage++; renderTable(); });
+  document.getElementById('exportBtn').addEventListener('click', exportCsv);
+}
+function exportCsv(){
+  const header = ['ชื่อโครงการ','ประเภท','สถานะ','เขต/อำเภอ','จังหวัด','ขนาด','ท่อบำบัดรวม','ปีงบประมาณ'];
+  const lines = [header.join(',')];
+  FILTERED.forEach(r=>{
+    const row = [r.n,r.t,STATUS_LABEL[r.c],r.d,r.p,r.s, r.w?'เชื่อมต่อ':'ไม่เชื่อมต่อ', r.y??''];
+    lines.push(row.map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));
+  });
+  const blob = new Blob(['\uFEFF'+lines.join('\n')], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'pollution_sources_filtered.csv';
+  a.click(); URL.revokeObjectURL(url);
+}
+
+/* ---------------- Advanced filter toggle ---------------- */
+function initAdvToggle(){
+  const btn = document.getElementById('advToggle');
+  const panel = document.getElementById('advPanel');
+  btn.addEventListener('click', ()=>{
+    const open = panel.hidden;
+    panel.hidden = !open;
+    btn.classList.toggle('open', open);
+  });
+}
+
+/* ---------------- Filter body collapse ---------------- */
+function initFilterCollapse(){
+  const btn = document.getElementById('filterCollapseToggle');
+  const body = document.getElementById('filterBody');
+  if (!btn || !body) return;
+  btn.addEventListener('click', ()=>{
+    const collapsed = !body.hidden;
+    body.hidden = collapsed;
+    btn.classList.toggle('collapsed', collapsed);
+    btn.title = collapsed ? 'ขยายแถบตัวกรอง' : 'ย่อแถบตัวกรอง';
+  });
+}
+
+/* ---------------- Chart tabs ---------------- */
+function initChartTabs(){
+  document.getElementById('chartTabs').addEventListener('click', (e)=>{
+    const btn = e.target.closest('button'); if(!btn) return;
+    document.querySelectorAll('#chartTabs button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.chart-pane').forEach(p=>p.classList.remove('active'));
+    document.getElementById(btn.dataset.pane).classList.add('active');
+    // Chart.js measures canvas size at creation time; canvases inside a
+    // display:none tab get 0 width/height and stay blank. Force a resize
+    // once the pane is actually visible so those charts draw correctly.
+    requestAnimationFrame(()=>{
+      Object.values(charts).forEach(ch => ch && ch.resize());
+    });
+  });
+}
+
+/* ---------------- Data source status message (used by file upload) ---------------- */
+function setGsheetMsg(text, kind){
+  const el = document.getElementById('gsheetMsg');
+  if (!el) return;
+  el.textContent = text;
+  el.className = 'gsheet-msg' + (kind ? ' '+kind : '');
+}
+
+/* ---------------- Google Sheet live connect ----------------------------
+   No OAuth / API key required. The sheet must be shared as "Anyone with
+   the link" (Viewer) or published to the web. We build a CSV export URL
+   from the pasted link and fetch it directly from the browser, parse it
+   with the same XLSX/CSV pipeline used for uploaded files, and (optionally)
+   poll it on an interval for a real-time-ish connection.
+----------------------------------------------------------------------- */
+const LS_GSHEET = 'pollution_gsheet_config_v1';
+const DEFAULT_GSHEET_URL = 'https://docs.google.com/spreadsheets/d/1WWFLt5HF9wrMfese3sTq0WOQi5OI2Xb7EbDDYKvUi5c/edit?usp=sharing';
+let gsheetConfig = null;
+let gsheetTimer = null;
+
+function saveGsheetConfig(cfg){ try{ localStorage.setItem(LS_GSHEET, JSON.stringify(cfg)); }catch(e){} }
+function loadGsheetConfig(){ try{ const s = localStorage.getItem(LS_GSHEET); return s ? JSON.parse(s) : null; }catch(e){ return null; } }
+function clearGsheetConfig(){ try{ localStorage.removeItem(LS_GSHEET); }catch(e){} }
+
+// Accepts a normal edit link, a "published to web" link, or a bare sheet ID.
+function parseGsheetInput(raw){
+  raw = (raw||'').trim();
+  if (!raw) return null;
+  let gid = '0';
+  const gidMatch = raw.match(/[#&?]gid=([0-9]+)/);
+  if (gidMatch) gid = gidMatch[1];
+  const pubMatch = raw.match(/\/spreadsheets\/d\/e\/([a-zA-Z0-9-_]+)/);
+  if (pubMatch) return { published:true, id:pubMatch[1], gid };
+  const idMatch = raw.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if (idMatch) return { published:false, id:idMatch[1], gid };
+  if (/^[a-zA-Z0-9-_]{20,}$/.test(raw)) return { published:false, id:raw, gid };
   return null;
 }
 
-function computeBBox(geometry){
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  const scanRing = ring => ring.forEach(([x, y]) => {
-    if (x < minX) minX = x; if (x > maxX) maxX = x;
-    if (y < minY) minY = y; if (y > maxY) maxY = y;
-  });
-  if (geometry.type === 'Polygon') geometry.coordinates.forEach(scanRing);
-  else if (geometry.type === 'MultiPolygon') geometry.coordinates.forEach(poly => poly.forEach(scanRing));
-  return [minX, minY, maxX, maxY];
-}
-
-function pointInRing(lng, lat, ring){
-  let inside = false;
-  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++){
-    const xi = ring[i][0], yi = ring[i][1];
-    const xj = ring[j][0], yj = ring[j][1];
-    const intersect = ((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi);
-    if (intersect) inside = !inside;
+function buildCsvCandidates(parsed){
+  if (!parsed) return [];
+  if (parsed.published){
+    return [
+      'https://docs.google.com/spreadsheets/d/e/' + parsed.id + '/pub?output=csv&gid=' + parsed.gid,
+      'https://docs.google.com/spreadsheets/d/e/' + parsed.id + '/pub?output=csv',
+    ];
   }
-  return inside;
+  return [
+    'https://docs.google.com/spreadsheets/d/' + parsed.id + '/export?format=csv&gid=' + parsed.gid,
+    'https://docs.google.com/spreadsheets/d/' + parsed.id + '/gviz/tq?tqx=out:csv&gid=' + parsed.gid,
+  ];
 }
-function pointInPolygonCoords(lng, lat, coords){
-  if (!coords.length || !pointInRing(lng, lat, coords[0])) return false;
-  for (let k = 1; k < coords.length; k++){
-    if (pointInRing(lng, lat, coords[k])) return false; // inside a hole
+
+async function fetchSheetCsv(parsed){
+  const candidates = buildCsvCandidates(parsed);
+  let lastErr = null;
+  for (const url of candidates){
+    try{
+      const res = await fetch(url, { cache:'no-store' });
+      if (!res.ok){ lastErr = new Error('เซิร์ฟเวอร์ตอบกลับรหัส ' + res.status); continue; }
+      const text = await res.text();
+      if (/^\s*<(!DOCTYPE|html)/i.test(text)){ lastErr = new Error('ชีตนี้ยังไม่เปิดสิทธิ์แบบสาธารณะ (ได้หน้า HTML แทน CSV)'); continue; }
+      return text;
+    } catch(e){ lastErr = e; }
   }
-  return true;
+  throw lastErr || new Error('ไม่สามารถดึงข้อมูลจากลิงก์นี้ได้');
 }
-function pointInFeature(lng, lat, feature){
-  const geom = feature.geometry;
-  if (!geom) return false;
-  if (geom.type === 'Polygon') return pointInPolygonCoords(lng, lat, geom.coordinates);
-  if (geom.type === 'MultiPolygon') return geom.coordinates.some(poly => pointInPolygonCoords(lng, lat, poly));
-  return false;
-}
-function findProvinceForPoint(lng, lat){
-  for (let i = 0; i < provinceFeaturesList.length; i++){
-    const p = provinceFeaturesList[i];
-    const [minX, minY, maxX, maxY] = p.bbox;
-    if (lng < minX || lng > maxX || lat < minY || lat > maxY) continue;
-    if (pointInFeature(lng, lat, p.feature)) return i;
+
+async function connectGsheet(rawUrl, opts){
+  opts = opts || {};
+  const parsed = parseGsheetInput(rawUrl);
+  if (!parsed){
+    setGsheetMsg('รูปแบบลิงก์ไม่ถูกต้อง กรุณาวางลิงก์ Google Sheet ให้ครบถ้วน', 'err');
+    return false;
   }
-  return -1;
-}
-
-function buildProvinceFeaturesList(gj){
-  provinceFeaturesList = gj.features.map(f => {
-    const nameVal = Object.values(f.properties || {}).find(v => typeof v === 'string') || '';
-    return { feature: f, bbox: computeBBox(f.geometry), name: nameVal, voteCounts: {}, assignedValue: null, color: null };
-  });
-}
-
-// For every province, tally the zoneCol values of the data points that fall
-// geographically inside it, then assign the province the color of whichever
-// value "wins" that province. Also records, per row, exactly which single
-// province it physically falls inside (rowProvinceIndex) — this is what lets
-// clicking one province filter pins to *only* that province, even if a
-// neighboring province happens to share the same color/category.
-function computeZoneGrouping(){
-  zoneColorMap = {};
-  rowProvinceIndex = new Array(currentRows.length).fill(-1);
-  provinceFeaturesList.forEach(p => { p.voteCounts = {}; p.assignedValue = null; p.color = null; });
-  if (!latCol || !lngCol || !provinceFeaturesList.length) return;
-
-  currentRows.forEach((row, i) => {
-    const lat = parseCoord(row[latCol]), lng = parseCoord(row[lngCol]);
-    if (lat === null || lng === null) return;
-    const idx = findProvinceForPoint(lng, lat);
-    if (idx === -1) return;
-    rowProvinceIndex[i] = idx;
-    if (!zoneCol) return;
-    const val = String(row[zoneCol] ?? '').trim();
-    if (!val) return;
-    provinceFeaturesList[idx].voteCounts[val] = (provinceFeaturesList[idx].voteCounts[val] || 0) + 1;
-  });
-
-  if (!zoneCol) return;
-
-  provinceFeaturesList.forEach(p => {
-    const entries = Object.entries(p.voteCounts);
-    if (!entries.length) return;
-    entries.sort((a, b) => b[1] - a[1]);
-    p.assignedValue = entries[0][0];
-  });
-
-  const uniqueValues = Array.from(new Set(provinceFeaturesList.map(p => p.assignedValue).filter(Boolean)));
-  uniqueValues.sort((a, b) => collator.compare(a, b));
-  let colorIndex = 0;
-  uniqueValues.forEach(v => { zoneColorMap[v] = COLOR_PALETTE[colorIndex % COLOR_PALETTE.length]; colorIndex++; });
-  provinceFeaturesList.forEach(p => { p.color = p.assignedValue ? zoneColorMap[p.assignedValue] : null; });
-}
-
-function provinceStyle(p, index){
-  if (!p.assignedValue){
-    return { fillColor: '#d7dedb', color: '#c3cdc8', weight: 1, fillOpacity: 0.35 };
+  if (!opts.silent) setGsheetMsg('กำลังเชื่อมต่อและดึงข้อมูล...', '');
+  try{
+    const libOk = await ensureLib('XLSX');
+    if (!libOk) throw new Error('โหลดไลบรารีอ่านไฟล์ (XLSX) ไม่สำเร็จ');
+    const csvText = await fetchSheetCsv(parsed);
+    const wb = XLSX.read(csvText, { type:'string' });
+    const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval:null });
+    const rows = json.map(o => mapUploadedRow(o)).filter(Boolean);
+    if (!rows.length) throw new Error('ดึงข้อมูลสำเร็จ แต่ไม่พบแถวที่ตรงกับรูปแบบคอลัมน์ที่คาดไว้');
+    const payload = { cols:['n','t','c','a','o','s','d','p','w','y','j','r'], rows: rows };
+    loadData(payload, 'Google Sheet (เรียลไทม์) · อัปเดตล่าสุด ' + new Date().toLocaleString('th-TH'));
+    setGsheetMsg('เชื่อมต่อสำเร็จ · ดึงข้อมูล ' + rows.length.toLocaleString('th-TH') + ' รายการ · ' + new Date().toLocaleTimeString('th-TH'), 'ok');
+    const dot = document.getElementById('gsheetLiveDot');
+    if (dot) dot.classList.add('on');
+    const row = document.getElementById('gsheetRefreshRow');
+    if (row) row.hidden = false;
+    return true;
+  } catch(err){
+    setGsheetMsg('เชื่อมต่อไม่สำเร็จ: ' + err.message + ' — ตรวจสอบว่าตั้งค่าแชร์เป็น "Anyone with the link" หรือ Publish to web แล้ว', 'err');
+    const dot = document.getElementById('gsheetLiveDot');
+    if (dot) dot.classList.remove('on');
+    return false;
   }
-  const hasSelection = selectedProvinceKeys.size > 0;
-  const isSelected = selectedProvinceKeys.has(index);
-  return {
-    fillColor: p.color,
-    color: isSelected ? '#1c2622' : '#ffffff',
-    weight: isSelected ? 2 : 1,
-    fillOpacity: hasSelection ? (isSelected ? 0.75 : 0.12) : 0.5
-  };
 }
 
-function renderProvinceLayer(){
-  provinceLayer.clearLayers();
-  if (!zoneCol || !provinceGeoJSON) return;
+function setGsheetAutoRefresh(on, ms){
+  if (gsheetTimer){ clearInterval(gsheetTimer); gsheetTimer = null; }
+  const label = document.getElementById('gsheetRefreshLabel');
+  const btn = document.getElementById('gsheetRefreshToggleBtn');
+  if (on){
+    gsheetTimer = setInterval(()=>{ if (gsheetConfig) connectGsheet(gsheetConfig.raw, {silent:true}); }, ms);
+    if (label) label.textContent = 'รีเฟรชอัตโนมัติ: ทุก ' + Math.round(ms/1000) + ' วินาที';
+    if (btn) btn.textContent = 'ปิดรีเฟรชอัตโนมัติ';
+  } else {
+    if (label) label.textContent = 'รีเฟรชอัตโนมัติ: ปิด';
+    if (btn) btn.textContent = 'เปิดรีเฟรชอัตโนมัติ';
+  }
+  if (gsheetConfig){ gsheetConfig.autoRefresh = on; gsheetConfig.refreshMs = ms; saveGsheetConfig(gsheetConfig); }
+}
 
-  provinceFeaturesList.forEach((p, index) => {
-    const layer = L.geoJSON(p.feature, { style: () => provinceStyle(p, index) });
-    if (p.assignedValue){
-      layer.bindTooltip(`${escapeHtml(p.name)} — ${escapeHtml(p.assignedValue)}`, { sticky: true });
-      layer.on('click', () => {
-        // single-select: clicking a province shows only the pins physically
-        // inside that one province, regardless of what other provinces share its color
-        if (selectedProvinceKeys.size === 1 && selectedProvinceKeys.has(index)){
-          selectedProvinceKeys = new Set();
-        } else {
-          selectedProvinceKeys = new Set([index]);
-        }
-        renderProvinceLayer();
-        renderZoneLegend();
-        rebuildMarkers();
-      });
-      layer.on('mouseover', function(){ this.setStyle({ weight: 2 }); });
-      layer.on('mouseout', function(){ this.setStyle(provinceStyle(p, index)); });
-    } else {
-      layer.bindTooltip(escapeHtml(p.name), { sticky: true });
+function initGsheetConnect(){
+  const toggleBtn = document.getElementById('gsheetToggleBtn');
+  const panel = document.getElementById('gsheetPanel');
+  const urlInput = document.getElementById('gsheetUrlInput');
+  const connectBtn = document.getElementById('gsheetConnectBtn');
+  const refreshToggleBtn = document.getElementById('gsheetRefreshToggleBtn');
+  const refreshNowBtn = document.getElementById('gsheetRefreshNowBtn');
+  const disconnectBtn = document.getElementById('gsheetDisconnectBtn');
+  const REFRESH_MS = 60000; // poll every 60s while auto-refresh is on
+
+  toggleBtn.addEventListener('click', ()=>{ panel.hidden = !panel.hidden; });
+  document.addEventListener('click', (e)=>{
+    if (!panel.hidden && !panel.contains(e.target) && !toggleBtn.contains(e.target)) panel.hidden = true;
+  });
+
+  connectBtn.addEventListener('click', async ()=>{
+    const raw = urlInput.value.trim();
+    if (!raw){ setGsheetMsg('กรุณาวางลิงก์ Google Sheet ก่อน', 'err'); return; }
+    const success = await connectGsheet(raw);
+    if (success){
+      gsheetConfig = { raw, autoRefresh:false, refreshMs:REFRESH_MS };
+      saveGsheetConfig(gsheetConfig);
     }
-    layer.addTo(provinceLayer);
   });
 
-  el('clear-zone-btn').style.display = selectedProvinceKeys.size ? 'block' : 'none';
-}
-
-function renderZoneLegend(){
-  const list = el('zone-legend-list');
-  const status = el('zone-status');
-  list.innerHTML = '';
-
-  if (!zoneCol){
-    status.className = '';
-    status.textContent = 'เลือกคอลัมน์ด้านบนเพื่อแบ่งสีพื้นที่บนแผนที่ตามจังหวัด';
-    return;
-  }
-  if (!provinceGeoJSON){
-    status.className = 'warn';
-    status.textContent = 'กำลังโหลดขอบเขตจังหวัด… หากใช้เวลานานเกินไป อาจเป็นเพราะเครือข่ายไม่สามารถเข้าถึงแหล่งข้อมูลแผนที่ได้';
-    return;
-  }
-
-  const entries = Object.entries(zoneColorMap);
-  if (!entries.length){
-    status.className = '';
-    status.textContent = 'ไม่พบจุดที่จับคู่กับจังหวัดได้ ลองเลือกคอลัมน์อื่น';
-    return;
-  }
-  status.className = '';
-  status.textContent = selectedProvinceKeys.size === 0
-    ? 'คลิกจังหวัดบนแผนที่ หรือคลิกรายการด้านล่าง เพื่อแสดงหมุดในพื้นที่นั้น'
-    : '';
-
-  const counts = {};
-  currentRows.forEach(row => {
-    const lat = parseCoord(row[latCol]), lng = parseCoord(row[lngCol]);
-    if (lat === null || lng === null) return;
-    const val = String(row[zoneCol] ?? '').trim();
-    if (val) counts[val] = (counts[val] || 0) + 1;
+  refreshToggleBtn.addEventListener('click', ()=>{
+    if (!gsheetConfig) return;
+    setGsheetAutoRefresh(!gsheetConfig.autoRefresh, gsheetConfig.refreshMs || REFRESH_MS);
+  });
+  refreshNowBtn.addEventListener('click', ()=>{ if (gsheetConfig) connectGsheet(gsheetConfig.raw); });
+  disconnectBtn.addEventListener('click', ()=>{
+    setGsheetAutoRefresh(false, REFRESH_MS);
+    gsheetConfig = null;
+    clearGsheetConfig();
+    document.getElementById('gsheetRefreshRow').hidden = true;
+    document.getElementById('gsheetLiveDot').classList.remove('on');
+    setGsheetMsg('ยกเลิกการเชื่อมต่อแล้ว กรุณาเชื่อมต่อ Google Sheet ใหม่เพื่อดูข้อมูล', '');
+    loadData(EMBEDDED_DATA, 'ยังไม่ได้เชื่อมต่อ Google Sheet');
   });
 
-  entries.sort((a, b) => collator.compare(a[0], b[0]));
-  entries.forEach(([value, color]) => {
-    const matchingIndices = [];
-    provinceFeaturesList.forEach((p, idx) => { if (p.assignedValue === value) matchingIndices.push(idx); });
-    const isFullySelected = matchingIndices.length > 0 &&
-      selectedProvinceKeys.size === matchingIndices.length &&
-      matchingIndices.every(idx => selectedProvinceKeys.has(idx));
-
-    const item = document.createElement('div');
-    item.className = 'legend-item clickable' + (isFullySelected ? ' zone-selected' : '');
-    item.innerHTML = `<span class="legend-dot square" style="background:${color}"></span><span>${escapeHtml(value)}</span><span class="legend-count">${(counts[value] || 0).toLocaleString()}</span>`;
-    item.addEventListener('click', () => {
-      // selects every province carrying this value/color; if a single
-      // province within it was already the sole selection, this widens it —
-      // click a province directly on the map to narrow back down to just one
-      selectedProvinceKeys = isFullySelected ? new Set() : new Set(matchingIndices);
-      renderProvinceLayer();
-      renderZoneLegend();
-      rebuildMarkers();
+  const saved = loadGsheetConfig();
+  if (saved && saved.raw){
+    urlInput.value = saved.raw;
+    gsheetConfig = saved;
+    connectGsheet(saved.raw, { silent:true }).then(ok=>{
+      if (ok && saved.autoRefresh) setGsheetAutoRefresh(true, saved.refreshMs || REFRESH_MS);
     });
-    list.appendChild(item);
-  });
-}
-
-function populateZoneColumnSelect(){
-  const sel = el('zone-col-select');
-  sel.innerHTML = '';
-  const noneOpt = document.createElement('option');
-  noneOpt.value = '';
-  noneOpt.textContent = 'ไม่แบ่งพื้นที่';
-  sel.appendChild(noneOpt);
-  currentHeaders.filter(h => h !== latCol && h !== lngCol).forEach(h => {
-    const opt = document.createElement('option');
-    opt.value = h;
-    opt.textContent = h;
-    sel.appendChild(opt);
-  });
-  sel.value = zoneCol || '';
-}
-
-el('zone-col-select').addEventListener('change', (e) => {
-  zoneCol = e.target.value || null;
-  selectedProvinceKeys = new Set();
-  computeZoneGrouping();
-  renderProvinceLayer();
-  renderZoneLegend();
-  rebuildMarkers();
-});
-
-el('clear-zone-btn').addEventListener('click', () => {
-  selectedProvinceKeys = new Set();
-  renderProvinceLayer();
-  renderZoneLegend();
-  rebuildMarkers();
-});
-
-// Fetch the province boundaries once, in the background, independent of
-// whether a file has already been uploaded.
-loadProvinceGeo().then(gj => {
-  provinceGeoJSON = gj;
-  if (!gj) return;
-  buildProvinceFeaturesList(gj);
-  if (currentRows.length){
-    computeZoneGrouping();
-    renderProvinceLayer();
-    renderZoneLegend();
-  }
-}).catch(() => { provinceGeoJSON = null; });
-
-function handleFile(file){
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    try {
-      const data = new Uint8Array(e.target.result);
-      const workbook = XLSX.read(data, { type: 'array' });
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
-      const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-
-      if (!json.length){ setStatus('ไม่พบข้อมูลในไฟล์นี้', 'err'); return; }
-
-      currentHeaders = Object.keys(json[0]);
-      currentRows = json;
-      activeFilters = {};
-      searchTerm = '';
-      el('search-input').value = '';
-
-      resolveColumns();
-
-      if (!latCol || !lngCol){
-        setStatus('ไม่พบคอลัมน์พิกัด (ละติจูด/ลองจิจูด) ในไฟล์นี้ กรุณาตรวจสอบชื่อคอลัมน์ในไฟล์', 'err');
-        return;
+  } else if (DEFAULT_GSHEET_URL){
+    // First run: connect automatically to the default sheet, no click needed.
+    urlInput.value = DEFAULT_GSHEET_URL;
+    gsheetConfig = { raw: DEFAULT_GSHEET_URL, autoRefresh:true, refreshMs:REFRESH_MS };
+    connectGsheet(DEFAULT_GSHEET_URL, { silent:true }).then(ok=>{
+      if (ok){
+        saveGsheetConfig(gsheetConfig);
+        setGsheetAutoRefresh(true, REFRESH_MS);
       }
-
-      el('file-name-label').textContent = `${file.name} • ${json.length.toLocaleString()} แถว`;
-      el('upload-stage').style.display = 'none';
-      el('dashboard-stage').style.display = 'block';
-      setStatus('', 'ok');
-
-      selectedProvinceKeys = new Set();
-      updateSearchUI();
-      buildFilters();
-      populateLegendColumnSelect();
-      populateZoneColumnSelect();
-      computeZoneGrouping();
-      renderProvinceLayer();
-      renderZoneLegend();
-      rebuildMarkers();
-    } catch (err){
-      console.error(err);
-      setStatus('อ่านไฟล์ไม่สำเร็จ ตรวจสอบว่าเป็นไฟล์ Excel หรือ CSV ที่ถูกต้อง', 'err');
-    }
-  };
-  reader.readAsArrayBuffer(file);
+    });
+  }
 }
 
-const collator = new Intl.Collator('th');
-
-function createSearchableDropdown(col, values){
-  const wrap = document.createElement('div');
-  wrap.className = 'dd';
-  wrap.dataset.col = col;
-
-  const input = document.createElement('input');
-  input.className = 'dd-input';
-  input.autocomplete = 'off';
-  input.placeholder = 'ทั้งหมด';
-  input.value = activeFilters[col] || '';
-
-  const list = document.createElement('div');
-  list.className = 'dd-list';
-
-  function renderList(filterText){
-    list.innerHTML = '';
-    const ft = (filterText || '').toLowerCase();
-
-    const allItem = document.createElement('div');
-    allItem.className = 'dd-item dd-all';
-    allItem.textContent = 'ทั้งหมด';
-    if (!activeFilters[col]) allItem.classList.add('selected');
-    allItem.addEventListener('mousedown', (e) => { e.preventDefault(); selectValue(''); });
-    list.appendChild(allItem);
-
-    const matched = values.filter(v => v.toLowerCase().includes(ft));
-    matched.forEach(v => {
-      const item = document.createElement('div');
-      item.className = 'dd-item';
-      item.textContent = v;
-      if (activeFilters[col] === v) item.classList.add('selected');
-      item.addEventListener('mousedown', (e) => { e.preventDefault(); selectValue(v); });
-      list.appendChild(item);
-    });
-
-    if (matched.length === 0){
-      const empty = document.createElement('div');
-      empty.className = 'dd-empty';
-      empty.textContent = 'ไม่พบผลลัพธ์';
-      list.appendChild(empty);
-    }
-  }
-
-  function selectValue(v){
-    if (v) activeFilters[col] = v; else delete activeFilters[col];
-    input.value = v;
-    wrap.classList.toggle('active-filter', !!v);
-    closeList();
-    rebuildMarkers();
-  }
-
-  function openList(){
-    renderList('');
-    wrap.classList.add('open');
-  }
-  function closeList(){
-    wrap.classList.remove('open');
-  }
-
-  wrap.classList.toggle('active-filter', !!activeFilters[col]);
-
-  input.addEventListener('focus', () => { input.select(); openList(); });
-  input.addEventListener('click', () => { if (!wrap.classList.contains('open')) openList(); });
-  input.addEventListener('input', () => { renderList(input.value); wrap.classList.add('open'); });
-  input.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ input.blur(); closeList(); } });
-  input.addEventListener('blur', () => { input.value = activeFilters[col] || ''; closeList(); });
-
-  wrap.appendChild(input);
-  wrap.appendChild(list);
-  return wrap;
-}
-
-document.addEventListener('mousedown', (e) => {
-  document.querySelectorAll('#filters-grid .dd.open').forEach(dd => {
-    if (!dd.contains(e.target)) dd.classList.remove('open');
-  });
-});
-
-function buildFilters(){
-  const grid = el('filters-grid');
-  grid.innerHTML = '';
-
-  // every column becomes a filter, except the coordinate columns and the project-name column
-  // (the project name is already searchable via the search box above)
-  const filterCols = currentHeaders.filter(h => h !== latCol && h !== lngCol && h !== nameCol && String(h).trim() !== 'ชื่อโครงการ');
-
-  filterCols.forEach(col => {
-    const valueSet = new Set();
-    currentRows.forEach(row => {
-      const v = row[col];
-      if (v !== '' && v !== null && v !== undefined) valueSet.add(String(v).trim());
-    });
-    if (valueSet.size === 0 || valueSet.size > MAX_FILTER_UNIQUE) return;
-
-    let values = Array.from(valueSet);
-    const allNumeric = values.every(v => !isNaN(parseFloat(v)) && isFinite(v));
-    values.sort(allNumeric ? (a,b) => parseFloat(a)-parseFloat(b) : (a,b) => collator.compare(a,b));
-
-    const field = document.createElement('div');
-    field.className = 'filter-field';
-    const label = document.createElement('label');
-    label.textContent = col;
-    label.title = col;
-
-    const dropdown = createSearchableDropdown(col, values);
-
-    field.appendChild(label);
-    field.appendChild(dropdown);
-    grid.appendChild(field);
+/* ---------------- Upload new data (fallback path inside the panel) ---------------- */
+function initUpload(){
+  const input = document.getElementById('fileInput');
+  input.addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev)=>{
+      try{
+        const wb = XLSX.read(ev.target.result, {type:'binary', cellDates:false});
+        const sheetNames = wb.SheetNames;
+        let combined = [];
+        sheetNames.forEach(name => {
+          const json = XLSX.utils.sheet_to_json(wb.Sheets[name], {defval:null});
+          combined = combined.concat(json);
+        });
+        const rows = combined.map(o => mapUploadedRow(o)).filter(Boolean);
+        if (!rows.length){ alert('ไม่พบข้อมูลที่ตรงกับรูปแบบคอลัมน์ที่คาดไว้ในไฟล์นี้'); return; }
+        const payload = { cols:['n','t','c','a','o','s','d','p','w','y','j','r'], rows: rows };
+        loadData(payload, 'อัปโหลดโดยผู้ใช้ · ' + file.name + ' · ' + new Date().toLocaleString('th-TH'));
+        setGsheetMsg('โหลดไฟล์ "' + file.name + '" สำเร็จ (' + rows.length.toLocaleString('th-TH') + ' รายการ)', 'ok');
+      } catch(err){
+        alert('อ่านไฟล์ไม่สำเร็จ: ' + err.message);
+      }
+    };
+    reader.readAsBinaryString(file);
   });
 }
-
-function escapeHtml(str){
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
+function pick(o, keys){ for(const k of keys){ if(o[k]!==undefined && o[k]!==null && o[k]!=='') return o[k]; } return null; }
+function mapUploadedRow(o){
+  const name = pick(o, ['ชื่อโครงการ','name']);
+  if (!name) return null;
+  const status = pick(o, ['สถานะปัจจุบัน','status']);
+  const sewer = pick(o, ['การเชื่อมต่อท่อเข้าระบบบำบัดน้ำเสียรวม','sewer']);
+  const lat = parseFloat(pick(o,['lat','ละติจูด']));
+  const lng = parseFloat(pick(o,['long','ลองจิจูด','lng']));
+  const year = pick(o, ['ปีงบประมาณ','year']);
+  return [
+    String(name).trim(),
+    String(pick(o,['ประเภทแหล่งกำเนิดมลพิษ','type'])||'').trim(),
+    String(status||'').trim() === 'ปฏิบัติตามกฎหมาย',
+    isNaN(lat)?null:Math.round(lat*1e6)/1e6,
+    isNaN(lng)?null:Math.round(lng*1e6)/1e6,
+    String(pick(o,['ขนาด','size'])||'').trim(),
+    String(pick(o,['เขต/อำเภอ','district'])||'').trim(),
+    String(pick(o,['จังหวัด','province'])||'').trim(),
+    String(sewer||'').trim().startsWith('เชื่อมต่อ'),
+    year ? parseInt(year,10) : null,
+    String(pick(o,['โครงการ','project'])||'').trim(),
+    'อัปโหลดใหม่',
+  ];
 }
 
-function rebuildMarkers(){
-  if (!latCol || !lngCol || !currentRows.length) return;
+/* ---------------- Keep filter bar from overlapping the header ---------------- */
+function syncHeaderHeight(){
+  const header = document.querySelector('header.topbar');
+  if (!header) return;
+  document.documentElement.style.setProperty('--header-h', header.offsetHeight + 'px');
+}
+function initHeaderHeightSync(){
+  syncHeaderHeight();
+  const header = document.querySelector('header.topbar');
+  if (window.ResizeObserver && header){
+    new ResizeObserver(syncHeaderHeight).observe(header);
+  }
+  window.addEventListener('resize', syncHeaderHeight);
+}
 
-  markersLayer.clearLayers();
-  categoryColorMap = {};
-  let colorIndex = 0;
-  let totalValid = 0, shown = 0, skipped = 0;
-  const bounds = [];
-
-  currentRows.forEach((row, rowIdx) => {
-    const lat = parseCoord(row[latCol]);
-    const lng = parseCoord(row[lngCol]);
-    if (lat === null || lng === null || lat < -90 || lat > 90 || lng < -180 || lng > 180){ skipped++; return; }
-    totalValid++;
-
-    const catValue = catCol ? String(row[catCol] ?? '').trim() : '';
-    const catKey = catValue || '(ไม่ระบุ)';
-    if (!(catKey in categoryColorMap)){
-      categoryColorMap[catKey] = COLOR_PALETTE[colorIndex % COLOR_PALETTE.length];
-      colorIndex++;
-    }
-
-    // search filter
-    if (searchTerm){
-      if (!nameCol) return;
-      const nameVal = String(row[nameCol] ?? '').toLowerCase();
-      if (!nameVal.includes(searchTerm)) return;
-    }
-
-    // dropdown filters
-    for (const [col, val] of Object.entries(activeFilters)){
-      const rowVal = String(row[col] ?? '').trim();
-      if (rowVal !== val) return;
-    }
-
-    // area-division filter: while a zone column is chosen, wait for the user
-    // to click a province before showing any pins at all; once a province is
-    // selected, show only the pins physically inside it
-    if (zoneCol){
-      if (selectedProvinceKeys.size === 0) return;
-      if (!selectedProvinceKeys.has(rowProvinceIndex[rowIdx])) return;
-    }
-
-    shown++;
-    bounds.push([lat, lng]);
-    const color = categoryColorMap[catKey];
-    const title = nameCol ? String(row[nameCol] ?? '').trim() : '';
-    const displayTitle = title || `จุดที่ ${shown}`;
-
-    const marker = L.circleMarker([lat, lng], {
-      radius: 6.5,
-      color: '#ffffff',
-      weight: 1.5,
-      fillColor: color,
-      fillOpacity: 0.9
-    });
-
-    let popupHtml = `<div class="popup-title">${escapeHtml(displayTitle)}</div>`;
-    if (catCol && catValue) popupHtml += `<span class="popup-cat" style="background:${color}">${escapeHtml(catValue)}</span>`;
-    currentHeaders.forEach(h => {
-      if (h === latCol || h === lngCol || h === nameCol || h === catCol) return;
-      const v = row[h];
-      if (v === '' || v === null || v === undefined) return;
-      popupHtml += `<div class="popup-field"><strong>${escapeHtml(h)}:</strong> ${escapeHtml(String(v))}</div>`;
-    });
-    marker.bindPopup(popupHtml);
-    markersLayer.addLayer(marker);
-  });
-
-  el('stat-total-big').textContent = totalValid.toLocaleString();
-  el('stat-shown-big').textContent = shown.toLocaleString();
-  el('skip-note').textContent = skipped > 0 ? `ข้าม ${skipped.toLocaleString()} แถวที่พิกัดไม่ถูกต้อง` : '';
-
-  renderLegend(catCol);
-
-  lastBounds = bounds;
-  const areaWaiting = !!zoneCol && selectedProvinceKeys.size === 0 && totalValid > 0;
-
-  if (bounds.length){
-    placeholder.style.display = 'none';
-    resetViewBtn.style.display = 'flex';
-    refreshMapSize();
-    setTimeout(() => { map.invalidateSize(); map.fitBounds(bounds, { padding: [40,40], maxZoom: 15 }); }, 30);
-  } else if (areaWaiting){
-    // area-division active, waiting for a province click — keep the colored
-    // province map visible; don't show the "no data" placeholder or reset view
-    placeholder.style.display = 'none';
-    resetViewBtn.style.display = 'none';
+/* ---------------- Init ---------------- */
+/* ---------------- Font-ready guard (fixes iOS Safari label clipping) ----------------
+   Canvas text measurement/rendering uses whatever font is actually loaded at
+   draw time. On iOS Safari the "IBM Plex Sans Thai" web font can still be
+   downloading when the first chart paints, so both Chart.js and our pixel-
+   accurate label-fitting logic measure text using a fallback font instead —
+   the metrics don't match the real typeface, and the chart labels end up
+   clipped far more aggressively than intended. Waiting for the font (with a
+   short timeout safety net so a slow network never blocks first paint for
+   long) avoids the mismatch entirely instead of just patching it after. */
+function withFontsReady(cb, timeoutMs){
+  timeoutMs = timeoutMs || 400;
+  let done = false;
+  const finish = () => { if (done) return; done = true; cb(); };
+  if (window.document && document.fonts && document.fonts.ready){
+    const specs = ["400 11px 'IBM Plex Sans Thai'", "500 11px 'IBM Plex Sans Thai'", "600 11px 'IBM Plex Sans Thai'"];
+    Promise.all(specs.map(s => { try{ return document.fonts.load(s); }catch(e){ return Promise.resolve(); } }))
+      .then(()=> document.fonts.ready)
+      .then(finish)
+      .catch(finish);
+    setTimeout(finish, timeoutMs);
   } else {
-    el('placeholder-title').textContent = 'ยังไม่มีข้อมูลบนแผนที่';
-    el('placeholder-text').textContent = 'อัปโหลดไฟล์ Excel ทางด้านซ้ายเพื่อเริ่มปักหมุด';
-    placeholder.style.display = 'flex';
-    resetViewBtn.style.display = 'none';
+    finish();
   }
 }
 
-function renderLegend(catCol){
-  const legendList = el('legend-list');
-  legendList.innerHTML = '';
-  const entries = Object.entries(categoryColorMap);
-  if (!catCol || !entries.length){
-    legendList.innerHTML = '<div class="legend-empty">เลือกคอลัมน์ด้านบนเพื่อแบ่งสีจุดตามหมวดหมู่</div>';
-    return;
+function init(){
+  initTheme();
+  initMobilePreview();
+  initClock();
+  initHeaderHeightSync();
+  initMap();
+  attachFilterEvents();
+  attachTableEvents();
+  initAdvToggle();
+  initFilterCollapse();
+  initChartTabs();
+  initChartDetailModal();
+  initUpload();
+  withFontsReady(() => {
+    loadData(EMBEDDED_DATA, 'กำลังเชื่อมต่อ Google Sheet...');
+    initGsheetConnect(); // loads all data live from the connected Google Sheet
+  });
+  // Extra safety net: if the timeout fallback fired before the font actually
+  // finished loading, re-render once it truly is ready so labels self-correct.
+  // iOS Safari's document.fonts.ready has historically resolved a touch early
+  // for @font-face fonts pulled in via a <link> (as opposed to the Font
+  // Loading API), so a single fonts.ready re-render isn't fully reliable on
+  // its own — pair it with a couple of delayed re-renders on window 'load'
+  // and shortly after, which self-correct any remaining stale/oversized
+  // label measurements without any visible flicker (Chart.js just redraws).
+  const fixLabelsOnceReady = () => { if (Object.keys(charts).length) renderChartsSafe(); };
+  if (window.document && document.fonts && document.fonts.ready){
+    document.fonts.ready.then(fixLabelsOnceReady).catch(()=>{});
   }
-
-  const counts = {};
-  currentRows.forEach(row => {
-    const lat = parseCoord(row[latCol]), lng = parseCoord(row[lngCol]);
-    if (lat === null || lng === null) return;
-    const catValue = String(row[catCol] ?? '').trim();
-    const catKey = catValue || '(ไม่ระบุ)';
-    counts[catKey] = (counts[catKey] || 0) + 1;
-  });
-
-  entries.forEach(([label, color]) => {
-    const item = document.createElement('div');
-    item.className = 'legend-item';
-    item.innerHTML = `<span class="legend-dot" style="background:${color}"></span><span>${escapeHtml(label)}</span><span class="legend-count">${(counts[label]||0).toLocaleString()}</span>`;
-    legendList.appendChild(item);
-  });
+  window.addEventListener('load', () => setTimeout(fixLabelsOnceReady, 60));
+  setTimeout(fixLabelsOnceReady, 1200);
+  setTimeout(fixLabelsOnceReady, 2500);
 }
 
-function populateLegendColumnSelect(){
-  const sel = el('legend-col-select');
-  sel.innerHTML = '';
-  const noneOpt = document.createElement('option');
-  noneOpt.value = '';
-  noneOpt.textContent = 'ไม่แบ่งสี';
-  sel.appendChild(noneOpt);
-  currentHeaders.filter(h => h !== latCol && h !== lngCol).forEach(h => {
-    const opt = document.createElement('option');
-    opt.value = h;
-    opt.textContent = h;
-    sel.appendChild(opt);
-  });
-  sel.value = catCol || '';
-}
+document.addEventListener('DOMContentLoaded', init);
+})();
 
-el('legend-col-select').addEventListener('change', (e) => {
-  catCol = e.target.value || null;
-  rebuildMarkers();
-});
-
-function updateSearchUI(){
-  const input = el('search-input');
-  if (nameCol){
-    input.disabled = false;
-    input.placeholder = `ค้นหา${nameCol}...`;
-  } else {
-    input.disabled = true;
-    input.placeholder = 'ไม่พบคอลัมน์ชื่อโครงการในไฟล์นี้';
-  }
-}
 </script>
 </body>
 </html>
